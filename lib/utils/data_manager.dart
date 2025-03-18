@@ -1,25 +1,24 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 import '../models/meal_model.dart';
 
-/// 앱에서 식단 데이터를 관리하는 싱글턴 클래스
 class DataManager extends ChangeNotifier {
   static final DataManager _instance = DataManager._internal();
   factory DataManager() => _instance;
   DataManager._internal();
 
-  final Map<DateTime, List<Meal>> _mealRecords = <DateTime, List<Meal>>{}; // 날짜별 식단 기록
+  final Map<DateTime, List<Meal>> _mealRecords = <DateTime, List<Meal>>{};
 
-  /// 새로운 식단을 추가하는 함수
+  /// 새로운 식단을 추가하는 함수 (SharedPreferences에도 저장)
   void addMeal(DateTime date, File image, Map<String, double> nutrients, String mealName) {
-    DateTime normalizedDate = DateTime(date.year, date.month, date.day); // 날짜 정규화 (시간 제외)
+    DateTime normalizedDate = DateTime(date.year, date.month, date.day);
     _mealRecords[normalizedDate] ??= [];
-    _mealRecords[normalizedDate]!.add(Meal(
-      image: image,
-      nutrients: nutrients,
-      mealName: mealName,
-    ));
-    notifyListeners(); // UI 업데이트를 위해 리스너들에게 변경 사항 알림
+    _mealRecords[normalizedDate]!.add(Meal(image: image, nutrients: nutrients, mealName: mealName));
+
+    saveMeals(); // 저장 기능 추가
+    notifyListeners();
   }
 
   /// 특정 날짜의 식단을 가져오는 함수
@@ -30,4 +29,44 @@ class DataManager extends ChangeNotifier {
 
   /// 모든 식단 데이터를 반환
   Map<DateTime, List<Meal>> get allMeals => _mealRecords;
+
+  /// 식단 데이터를 SharedPreferences에 저장하는 함수
+  Future<void> saveMeals() async {
+    final prefs = await SharedPreferences.getInstance();
+    Map<String, dynamic> jsonMeals = {};
+
+    _mealRecords.forEach((date, meals) {
+      jsonMeals[date.toIso8601String()] = meals.map((meal) {
+        return {
+          "imagePath": meal.image.path,
+          "nutrients": meal.nutrients,
+          "mealName": meal.mealName,
+        };
+      }).toList();
+    });
+
+    await prefs.setString('mealRecords', jsonEncode(jsonMeals));
+  }
+
+  /// SharedPreferences에서 데이터를 불러오는 함수
+  Future<void> loadMeals() async {
+    final prefs = await SharedPreferences.getInstance();
+    String? savedMeals = prefs.getString('mealRecords');
+
+    if (savedMeals == null) return;
+
+    Map<String, dynamic> jsonMeals = jsonDecode(savedMeals);
+    jsonMeals.forEach((date, meals) {
+      DateTime parsedDate = DateTime.parse(date);
+      _mealRecords[parsedDate] = (meals as List).map((meal) {
+        return Meal(
+          image: File(meal["imagePath"]),
+          nutrients: Map<String, double>.from(meal["nutrients"]),
+          mealName: meal["mealName"],
+        );
+      }).toList();
+    });
+
+    notifyListeners();
+  }
 }

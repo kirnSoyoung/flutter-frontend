@@ -7,6 +7,7 @@ import '../utils/food_list.dart'; // 음식 리스트 가져오기
 import '../utils/test_nutrients.dart';
 import '../utils/file_manager.dart';
 import 'nutrition_result_page.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// 사용자가 식단을 선택하고 영양소 분석을 진행하는 페이지
 class DietRecognitionPage extends StatefulWidget {
@@ -76,6 +77,27 @@ class _DietRecognitionPageState extends State<DietRecognitionPage> {
     });
   }
 
+  /// ✅ 식단 정보를 저장하는 함수
+  Future<void> saveMealData(String mealName, String imagePath) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('meal_name', mealName);
+    await prefs.setString('image_path', imagePath);
+  }
+
+  /// ✅ 앱 실행 시 저장된 데이터를 불러오는 함수
+  Future<void> loadMealData() async {
+    final prefs = await SharedPreferences.getInstance();
+    String? savedMeal = prefs.getString('meal_name');
+    String? savedImagePath = prefs.getString('image_path');
+
+    if (savedMeal != null && savedImagePath != null) {
+      setState(() {
+        selectedMeal = savedMeal;
+        selectedImagePath = savedImagePath;
+      });
+    }
+  }
+
   /// 검색 기능: 입력값과 일치하는 음식만 표시 (렉 방지)
   void _filterMeals(String query) {
     if (query.isEmpty) {
@@ -114,11 +136,13 @@ class _DietRecognitionPageState extends State<DietRecognitionPage> {
     final dataManager = Provider.of<DataManager>(context, listen: false);
     final DateTime mealDate = widget.selectedDate ?? DateTime.now();
 
-    // 저장된 사진 경로를 사용
     if (selectedImagePath == null) {
       print("❌ 사진 경로 없음. 저장된 사진을 찾을 수 없음.");
       return;
     }
+
+    // 📂 식단 데이터 저장 (SharedPreferences)
+    saveMealData(selectedMeal, selectedImagePath!);
 
     // 기존 식단 수정 시 기존 데이터 삭제 후 업데이트
     dataManager.getMealsForDate(mealDate)
@@ -127,18 +151,18 @@ class _DietRecognitionPageState extends State<DietRecognitionPage> {
     // 저장된 사진 경로를 사용하여 데이터 저장
     dataManager.addMeal(mealDate, File(selectedImagePath!), testNutrients, selectedMeal);
 
-    // 영양소 분석 결과 페이지로 이동 (이전 화면 제거)
+    // 영양소 분석 결과 페이지로 이동
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(
         builder: (context) => NutritionResultPage(
-          imagePath: widget.image.path,
+          imagePath: selectedImagePath!,
           nutrients: testNutrients,
           selectedDate: mealDate,
           mealName: selectedMeal,
           isFromHistory: true,
         ),
       ),
-          (route) => route.isFirst, // 첫 화면(Home)만 남기고 모든 화면 제거
+          (route) => route.isFirst,
     );
   }
 
