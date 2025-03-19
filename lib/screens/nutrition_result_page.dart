@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:provider/provider.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import '../utils/data_manager.dart';
 import '../widgets/nutrient_gauge.dart';
 import 'diet_recognition_page.dart';
@@ -8,11 +10,11 @@ import '../models/meal_model.dart';
 
 /// 사용자가 선택한 식사의 영양소 분석 결과를 보여주는 페이지
 class NutritionResultPage extends StatefulWidget {
-  final String imagePath; // 선택한 식사의 이미지 경로
-  final Map<String, double> nutrients; // 분석된 영양소 정보
-  final bool isFromHistory; // 기록에서 접근한 경우 (true) / 새로 추가된 경우 (false)
-  final DateTime? selectedDate; // 선택한 날짜
-  final String mealName; // 식사 이름
+  final String imagePath;
+  final Map<String, double> nutrients;
+  final bool isFromHistory;
+  final DateTime? selectedDate;
+  final String mealName;
 
   NutritionResultPage({
     required this.imagePath,
@@ -27,12 +29,13 @@ class NutritionResultPage extends StatefulWidget {
 }
 
 class _NutritionResultPageState extends State<NutritionResultPage> {
-  bool _mealAdded = false; // 식사가 추가되었는지 확인하는 변수
+  bool _mealAdded = false;
+  bool _isLoading = true;
+  Map<String, double> _nutrients = {};
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // 히스토리에서 온 경우가 아니라면, 식단을 자동으로 추가
     if (!_mealAdded && !widget.isFromHistory) {
       Provider.of<DataManager>(context, listen: false).addMeal(
         widget.selectedDate ?? DateTime.now(),
@@ -41,6 +44,35 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
         widget.mealName,
       );
       _mealAdded = true;
+    }
+    _fetchNutrientData();
+  }
+
+  /// ✅ 서버에서 음식 영양소 데이터를 불러오는 함수
+  Future<void> _fetchNutrientData() async {
+    try {
+      final response = await http.get(Uri.parse(
+          "https://yourserver.com/food/nutrients?food_name=${Uri.encodeComponent(widget.mealName)}"));
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['success']) {
+          setState(() {
+            _nutrients = Map<String, double>.from(data['nutrients']);
+            _isLoading = false;
+          });
+        } else {
+          print("❌ 서버 응답 실패: ${data['message']}");
+        }
+      } else {
+        print("❌ 서버 오류: ${response.reasonPhrase}");
+      }
+    } catch (e) {
+      print("❌ API 요청 중 오류 발생: $e");
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
@@ -62,11 +94,10 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
         ),
       ),
     ).then((_) {
-      setState(() {}); // 수정 후 UI 갱신
+      setState(() {});
     });
   }
 
-  /// ✅ 식단 삭제 기능 수정 (삭제 후 데이터 저장 추가)
   void _deleteMeal() {
     final dataManager = Provider.of<DataManager>(context, listen: false);
     DateTime mealDate = widget.selectedDate ?? DateTime.now();
@@ -84,21 +115,16 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
           TextButton(
             onPressed: () {
               List<Meal>? meals = dataManager.getMealsForDate(mealDate);
-
               if (meals != null) {
                 meals.removeWhere((meal) => meal.image.path == widget.imagePath);
-
-                // ✅ 해당 날짜의 식단이 모두 삭제되었다면, 날짜 자체를 `_mealRecords`에서 제거
                 if (meals.isEmpty) {
                   dataManager.allMeals.remove(mealDate);
                 }
-
-                dataManager.saveMeals(); // ✅ 삭제 후 데이터 저장
-                dataManager.notifyListeners(); // ✅ UI 업데이트
+                dataManager.saveMeals();
+                dataManager.notifyListeners();
               }
-
               Navigator.pop(context);
-              _goBack(); // 삭제 후 이전 화면으로 이동
+              _goBack();
             },
             child: Text("삭제", style: TextStyle(color: Colors.red)),
           ),
@@ -107,12 +133,11 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
     );
   }
 
-
   @override
   Widget build(BuildContext context) {
     return WillPopScope(
       onWillPop: () async {
-        _goBack(); // 뒤로 가기 버튼 클릭 시 동일한 동작 수행
+        _goBack();
         return false;
       },
       child: Scaffold(
@@ -139,21 +164,20 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
           padding: EdgeInsets.all(16.0),
           child: Column(
             children: [
-              // 음식 이미지 표시
               Image.file(File(widget.imagePath), width: double.infinity, height: 250, fit: BoxFit.cover),
               SizedBox(height: 20),
 
-              // 식단 이름 표시
               Text(
                 "현재 등록된 식단: ${widget.mealName}",
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               SizedBox(height: 10),
 
-              // 영양소 게이지 표시
-              Expanded(
+              _isLoading
+                  ? Center(child: CircularProgressIndicator())
+                  : Expanded(
                 child: ListView(
-                  children: widget.nutrients.entries.map((entry) {
+                  children: _nutrients.entries.map((entry) {
                     return NutrientGauge(
                       label: entry.key,
                       currentValue: entry.value,

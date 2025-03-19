@@ -1,112 +1,212 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:table_calendar/table_calendar.dart';
 import '../utils/data_manager.dart';
-import '../models/meal_model.dart';
-import 'nutrition_result_page.dart';
-import 'diet_recognition_page.dart';
+import 'package:intl/intl.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:image_picker/image_picker.dart';
-import 'dart:io';
+import '../screens/nutrition_result_page.dart';
+import '../screens/diet_recognition_page.dart';
 
-/// 사용자가 날짜별 식단을 확인하고 새로운 식단을 추가할 수 있는 페이지
 class HistoryPage extends StatefulWidget {
   @override
   _HistoryPageState createState() => _HistoryPageState();
 }
 
 class _HistoryPageState extends State<HistoryPage> {
-  DateTime _selectedDate = DateTime.now(); // 사용자가 선택한 날짜 (기본값: 오늘)
+  DateTime _currentWeekStart = DateTime.now();
+  DateTime? _selectedDate;
+
+  @override
+  void initState() {
+    super.initState();
+    initializeDateFormatting('ko_KR');
+    _currentWeekStart = _getWeekStart(DateTime.now());
+    _selectedDate = DateTime.now();
+  }
+
+  /// ✅ 해당 날짜가 속한 주의 시작일 (일요일부터 시작)
+  DateTime _getWeekStart(DateTime date) {
+    int weekday = date.weekday;
+    return date.subtract(Duration(days: weekday % 7));
+  }
+
+  /// ✅ 다음 주로 이동
+  void _nextWeek() {
+    setState(() {
+      _currentWeekStart = _currentWeekStart.add(Duration(days: 7));
+    });
+  }
+
+  /// ✅ 이전 주로 이동
+  void _previousWeek() {
+    setState(() {
+      _currentWeekStart = _currentWeekStart.subtract(Duration(days: 7));
+    });
+  }
+
+  /// ✅ 날짜 클릭 시 선택된 날짜 변경
+  void _selectDate(DateTime date) {
+    setState(() {
+      _selectedDate = date;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<DataManager>(
-      builder: (context, dataManager, child) {
-        // 선택한 날짜의 식단 목록 가져오기
-        List<Meal>? meals = dataManager.getMealsForDate(_selectedDate);
+    final dataManager = Provider.of<DataManager>(context);
+    List<DateTime> weekDays = List.generate(
+        7, (index) => _currentWeekStart.add(Duration(days: index)));
 
-        return Scaffold(
-          appBar: AppBar(title: Text("식단 기록")),
-          body: Column(
-            children: [
-              // 날짜 선택을 위한 캘린더 위젯
-              TableCalendar(
-                locale: 'ko_KR',
-                firstDay: DateTime(2023, 1, 1),
-                lastDay: DateTime(2025, 12, 31),
-                focusedDay: _selectedDate,
-                selectedDayPredicate: (day) => isSameDay(_selectedDate, day),
-                onDaySelected: (selectedDay, focusedDay) {
-                  setState(() {
-                    _selectedDate = selectedDay;
-                  });
-                },
-                headerStyle: HeaderStyle(
-                  formatButtonVisible: false, // 월/주 전환 버튼 숨김
-                  titleCentered: true, // 제목 중앙 정렬
+    return Scaffold(
+      appBar: AppBar(title: Text("식단 기록")),
+      body: Padding(
+        padding: EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            // ✅ 주간 네비게이션
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                IconButton(
+                  icon: Icon(Icons.arrow_back),
+                  onPressed: _previousWeek,
                 ),
-              ),
-              SizedBox(height: 10),
+                Text(
+                  "< ${DateFormat.yMMMM('ko_KR').format(_currentWeekStart)} >",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                IconButton(
+                  icon: Icon(Icons.arrow_forward),
+                  onPressed: _nextWeek,
+                ),
+              ],
+            ),
+            SizedBox(height: 10),
 
-              // 선택한 날짜의 식단 목록 표시
-              Expanded(
-                child: meals != null && meals.isNotEmpty
-                    ? ListView(
-                  children: meals.map((meal) {
-                    return GestureDetector(
-                      onTap: () {
-                        // 식단을 클릭하면 영양소 분석 결과 페이지로 이동
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => NutritionResultPage(
-                              imagePath: meal.image.path,
-                              nutrients: meal.nutrients,
-                              mealName: meal.mealName,
-                              isFromHistory: true,
-                              selectedDate: _selectedDate,
-                            ),
-                          ),
-                        );
-                      },
-                      child: Column(
-                        children: [
-                          Image.file(meal.image, width: double.infinity, height: 250, fit: BoxFit.cover),
-                          SizedBox(height: 5),
-                          Text("사진을 클릭하여 분석 결과 보기", style: TextStyle(fontSize: 12, color: Colors.grey)),
-                        ],
+            // ✅ 요일 헤더 (일요일~토요일)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: ["일", "월", "화", "수", "목", "금", "토"]
+                  .map((day) => Text(day, style: TextStyle(fontWeight: FontWeight.bold)))
+                  .toList(),
+            ),
+            SizedBox(height: 5),
+
+            // ✅ 현재 주 날짜 표시 (삭제 후 초록색 점 제거)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: weekDays.map((date) {
+                bool hasMeal = (dataManager.getMealsForDate(date)?.isNotEmpty ?? false);
+
+                return GestureDetector(
+                  onTap: () => _selectDate(date),
+                  child: Column(
+                    children: [
+                      Text(
+                        DateFormat.d().format(date),
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: _selectedDate?.day == date.day ? Colors.blue : Colors.black,
+                        ),
                       ),
-                    );
-                  }).toList(),
-                )
-                    : Center(child: Text("선택한 날짜에 등록된 식단이 없습니다.")), // 식단이 없을 경우 메시지 표시
-              ),
-              SizedBox(height: 10),
-
-              // 새로운 식단 추가 버튼
-              ElevatedButton(
-                onPressed: () async {
-                  final ImagePicker picker = ImagePicker();
-                  final XFile? pickedFile = await picker.pickImage(source: ImageSource.gallery);
-
-                  if (pickedFile != null) {
-                    File imageFile = File(pickedFile.path);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => DietRecognitionPage(image: imageFile, selectedDate: _selectedDate),
+                      Container(
+                        width: 6,
+                        height: 6,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: hasMeal ? Colors.green : Colors.transparent, // ✅ 식단이 없으면 점 제거
+                        ),
                       ),
-                    ).then((_) {
-                      setState(() {}); // 식단 추가 후 UI 갱신
-                    });
-                  }
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+            SizedBox(height: 20),
+
+            // ✅ 현재 주에 등록된 식단 사진들 (클릭 가능 → 영양소 분석 페이지 이동)
+            Expanded(
+              child: ListView.builder(
+                itemCount: weekDays.length,
+                itemBuilder: (context, index) {
+                  DateTime date = weekDays[index];
+                  var meals = dataManager.getMealsForDate(date) ?? [];
+
+                  return meals.isNotEmpty
+                      ? Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        DateFormat('MM월 dd일', 'ko_KR').format(date),
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                      SizedBox(height: 5),
+                      SizedBox(
+                        height: 100,
+                        child: ListView(
+                          scrollDirection: Axis.horizontal,
+                          children: meals.map((meal) {
+                            return GestureDetector(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => NutritionResultPage(
+                                      imagePath: meal.image.path,
+                                      nutrients: meal.nutrients,
+                                      selectedDate: date,
+                                      mealName: meal.mealName,
+                                      isFromHistory: true,
+                                    ),
+                                  ),
+                                );
+                              },
+                              child: Padding(
+                                padding: EdgeInsets.only(right: 10),
+                                child: Image.file(
+                                  File(meal.image.path),
+                                  width: 100,
+                                  height: 100,
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                      SizedBox(height: 10),
+                    ],
+                  )
+                      : Container();
                 },
-                child: Text("식단 등록하기"),
               ),
-              SizedBox(height: 10),
-            ],
-          ),
-        );
-      },
+            ),
+
+            ElevatedButton(
+              onPressed: () async {
+                final pickedFile =
+                await ImagePicker().pickImage(source: ImageSource.gallery);
+                if (pickedFile != null) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => DietRecognitionPage(
+                        image: File(pickedFile.path),
+                        selectedDate: _selectedDate,
+                        initialMealName: "",
+                        isEditing: false,
+                      ),
+                    ),
+                  );
+                }
+              },
+              child: Text("식단 등록하기"),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

@@ -1,31 +1,31 @@
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
+import 'package:path/path.dart';
+import 'package:mime/mime.dart';
+import 'dart:convert';
 
 class FileManager {
   /// 📂 **사진을 앱 내부 저장소에 저장하는 함수**
   static Future<String?> saveImageToStorage(XFile imageFile) async {
     try {
-      // 1️⃣ 앱 전용 디렉토리 가져오기
       final directory = await getApplicationDocumentsDirectory();
       final String photoDirPath = '${directory.path}/photos';
 
-      // 2️⃣ 폴더가 없으면 생성
       final photoDir = Directory(photoDirPath);
       if (!photoDir.existsSync()) {
         photoDir.createSync(recursive: true);
       }
 
-      // 3️⃣ 새 파일 이름 생성 (ex: meal_20240316_123456.jpg)
       final String timestamp = DateTime.now().millisecondsSinceEpoch.toString();
       final String fileName = 'meal_$timestamp.jpg';
       final String filePath = '$photoDirPath/$fileName';
 
-      // 4️⃣ 원본 이미지 파일을 새로운 경로로 복사
       final File newImage = File(filePath);
       await File(imageFile.path).copy(newImage.path);
 
-      // 5️⃣ 저장된 이미지 경로 반환
       return newImage.path;
     } catch (e) {
       print("❌ 이미지 저장 오류: $e");
@@ -61,6 +61,38 @@ class FileManager {
     } catch (e) {
       print("❌ 이미지 삭제 오류: $e");
       return false;
+    }
+  }
+
+  /// ✅ **사진을 서버로 업로드하는 함수**
+  static Future<Map<String, dynamic>?> uploadImageToServer(File imageFile) async {
+    try {
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('http://54.253.61.191:8000/upload'), // 🔥 실제 서버 주소로 변경
+      );
+
+      var mimeType = lookupMimeType(imageFile.path);
+      var fileStream = await http.MultipartFile.fromPath(
+        'image',
+        imageFile.path,
+        contentType: mimeType != null ? MediaType.parse(mimeType) : null,
+      );
+      request.files.add(fileStream);
+
+      var response = await request.send();
+      var responseData = await response.stream.bytesToString();
+
+      if (response.statusCode == 200) {
+        print("✅ 업로드 성공: $responseData");
+        return jsonDecode(responseData);
+      } else {
+        print("❌ 업로드 실패: ${response.reasonPhrase}");
+        return null;
+      }
+    } catch (e) {
+      print("❌ 업로드 중 오류 발생: $e");
+      return null;
     }
   }
 }

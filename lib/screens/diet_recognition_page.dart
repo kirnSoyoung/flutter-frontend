@@ -1,22 +1,19 @@
-
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import '../utils/data_manager.dart';
-import '../utils/food_list.dart'; // 음식 리스트 가져오기
-import '../utils/test_nutrients.dart';
+import '../utils/food_list.dart';
 import '../utils/file_manager.dart';
 import 'nutrition_result_page.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../models/meal_model.dart';
+import 'package:http_parser/http_parser.dart';
 
-/// 사용자가 식단을 선택하고 영양소 분석을 진행하는 페이지
 class DietRecognitionPage extends StatefulWidget {
-  final File image; // 선택한 음식 이미지
-  final DateTime? selectedDate; // 사용자가 선택한 날짜 (기본값: 오늘 날짜)
-  final String? initialMealName; // 기존 식단 이름 (수정 시 사용)
-  final bool isEditing; // 수정 여부 (기본값: false)
+  final File image;
+  final DateTime? selectedDate;
+  final String? initialMealName;
+  final bool isEditing;
 
   DietRecognitionPage({
     required this.image,
@@ -30,80 +27,84 @@ class DietRecognitionPage extends StatefulWidget {
 }
 
 class _DietRecognitionPageState extends State<DietRecognitionPage> {
-  List<String> mealOptions = []; // 전체 음식 리스트
-  List<String> filteredMealOptions = []; // 검색된 음식 리스트
-  late String selectedMeal; // 선택한 식단
-  TextEditingController searchController = TextEditingController(); // 검색어 입력 필드
-  bool isDropdownVisible = false; // 드롭다운 표시 여부
-  final ScrollController _scrollController = ScrollController(); // 스크롤 컨트롤러
+  List<String> mealOptions = [];
+  List<String> filteredMealOptions = [];
+  List<String> recognizedFoods = [];
+  Map<String, double> nutrients = {};
+  late String selectedMeal;
+  TextEditingController searchController = TextEditingController();
+  bool isDropdownVisible = false;
+  bool isUploading = true;
+  final ScrollController _scrollController = ScrollController();
   String? selectedImagePath;
 
   @override
   void initState() {
     super.initState();
-    _loadFoodList(); // 저장된 음식 리스트 불러오기
-
-    // 검색어 입력 시 자동 필터링
-    searchController.addListener(() {
-      _filterMeals(searchController.text);
-    });
-
-    // 사용자가 등록한 사진을 저장소에 저장
+    _loadFoodList();
     _saveMealImage(widget.image);
+    _uploadAndAnalyzeImage(widget.image);
   }
 
   /// 📂 **사진을 앱 내부 저장소에 저장하는 함수**
   void _saveMealImage(File imageFile) async {
     String? savedPath = await FileManager.saveImageToStorage(XFile(imageFile.path));
     if (savedPath != null) {
-      print("✅ 저장된 사진 경로: $savedPath");
       setState(() {
-        selectedImagePath = savedPath; // 저장된 경로를 UI에서 사용하도록 설정
+        selectedImagePath = savedPath;
       });
     } else {
       print("❌ 사진 저장 실패");
     }
   }
 
-  /// 음식 리스트를 SharedPreferences에서 불러오는 함수
-  Future<void> _loadFoodList() async {
-    List<String> foodList = await loadFoodList();
+  /// ✅ 사진을 업로드하고, 서버에서 음식 정보를 받아오는 함수
+  Future<void> _uploadAndAnalyzeImage(File image) async {
     setState(() {
-      mealOptions = foodList;
-      filteredMealOptions = foodList; // 처음에는 전체 리스트 표시
-      selectedMeal = mealOptions.contains(widget.initialMealName)
-          ? widget.initialMealName!
-          : mealOptions.first;
-      searchController.text = selectedMeal; // 기본값을 검색 필드에 설정
-      isDropdownVisible = false; // 앱 실행 시 드롭다운 닫힌 상태 유지
+      isUploading = true;
     });
-  }
 
-  /// ✅ 식단 정보를 저장하는 함수
-  Future<void> saveMealData(String mealName, String imagePath) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('meal_name', mealName);
-    await prefs.setString('image_path', imagePath);
-  }
+    var response = await FileManager.uploadImageToServer(image);
 
-  /// ✅ 앱 실행 시 저장된 데이터를 불러오는 함수
-  Future<void> loadMealData() async {
-    final prefs = await SharedPreferences.getInstance();
-    String? savedMeal = prefs.getString('meal_name');
-    String? savedImagePath = prefs.getString('image_path');
+    if (response != null && response['success'] == true) {
+      List<dynamic> foodList = response['recognized_foods'];
 
-    if (savedMeal != null && savedImagePath != null) {
       setState(() {
-        selectedMeal = savedMeal;
-        selectedImagePath = savedImagePath;
+        recognizedFoods = foodList.map((food) => food['food_name'] as String).toList();
+        nutrients = foodList.isNotEmpty ? foodList.first['nutrients'] : {};
+
+        if (recognizedFoods.isNotEmpty) {
+          selectedMeal = recognizedFoods.first;
+          searchController.text = selectedMeal;
+        }
+
+        isUploading = false;
+      });
+    } else {
+      print("❌ 음식 인식 실패");
+      setState(() {
+        isUploading = false;
       });
     }
   }
 
-  /// 검색 기능: 입력값과 일치하는 음식만 표시 (렉 방지)
+  Future<void> _loadFoodList() async {
+    List<String> foodList = await loadFoodList();
+    setState(() {
+      mealOptions = foodList;
+      filteredMealOptions = foodList;
+
+      selectedMeal = recognizedFoods.isNotEmpty
+          ? recognizedFoods.first
+          : (widget.initialMealName ?? mealOptions.first);
+
+      searchController.text = selectedMeal;
+      isDropdownVisible = false;
+    });
+  }
+
   void _filterMeals(String query) {
     if (query.isEmpty) {
-      // 검색어가 비어 있으면 모든 리스트를 그대로 표시 & 드롭다운 닫음
       setState(() {
         filteredMealOptions = mealOptions;
         isDropdownVisible = false;
@@ -111,64 +112,66 @@ class _DietRecognitionPageState extends State<DietRecognitionPage> {
       return;
     }
 
-    // 기존 필터링 방식 유지
     List<String> filteredResults = mealOptions.where((meal) => meal.contains(query)).toList();
-
-    // 변경 사항이 있을 때만 setState 호출 (불필요한 UI 업데이트 방지)
-    if (mounted && (filteredMealOptions != filteredResults || !isDropdownVisible)) {
-      setState(() {
-        filteredMealOptions = filteredResults;
-        isDropdownVisible = filteredMealOptions.isNotEmpty;
-      });
-    }
-  }
-
-
-  /// 사용자가 음식 리스트에서 선택한 경우
-  void _selectMeal(String meal) {
     setState(() {
-      selectedMeal = meal;
-      searchController.text = meal; // 검색창 업데이트
-      isDropdownVisible = false; // 선택 후 드롭다운 숨김
+      filteredMealOptions = filteredResults;
+      isDropdownVisible = filteredMealOptions.isNotEmpty;
     });
   }
 
-  /// 영양소 분석 결과 페이지로 이동
+  void _selectMeal(String meal) {
+    setState(() {
+      selectedMeal = meal;
+      searchController.text = meal;
+      isDropdownVisible = false;
+    });
+  }
+
+  /// ✅ X 버튼 클릭 시 검색창 초기화
+  void _clearSearch() {
+    setState(() {
+      searchController.clear();
+      filteredMealOptions = mealOptions;
+    });
+  }
+
   void proceedToAnalysis() {
     final dataManager = Provider.of<DataManager>(context, listen: false);
     final DateTime mealDate = widget.selectedDate ?? DateTime.now();
 
     if (selectedImagePath == null) {
-      print("❌ 사진 경로 없음. 저장된 사진을 찾을 수 없음.");
+      print("❌ 사진 경로 없음.");
       return;
     }
 
-    // ✅ 기존 식단 수정 시, 기존 데이터 삭제 후 저장
+    // ✅ 기존 데이터 삭제 로직 개선 (삭제 버튼과 동일한 방식 적용)
     if (widget.isEditing) {
       List<Meal>? meals = dataManager.getMealsForDate(mealDate);
 
       if (meals != null) {
-        meals.removeWhere((meal) => meal.image.path == widget.image.path);
+        meals.removeWhere((meal) =>
+        File(meal.image.path).absolute.path == File(widget.image.path).absolute.path); // ✅ 정확한 경로 비교
 
-        // ✅ 해당 날짜의 식단이 모두 삭제되었다면, 날짜 자체를 `_mealRecords`에서 제거
         if (meals.isEmpty) {
           dataManager.allMeals.remove(mealDate);
         }
 
-        dataManager.saveMeals(); // ✅ 삭제 후 데이터 저장
+        dataManager.saveMeals();
+        dataManager.notifyListeners();
       }
     }
 
     // ✅ 새로운 식단 추가 후 저장
-    dataManager.addMeal(mealDate, File(selectedImagePath!), testNutrients, selectedMeal);
-    dataManager.saveMeals(); // ✅ 추가 후 데이터 저장
+    dataManager.addMeal(mealDate, File(selectedImagePath!), nutrients, selectedMeal);
+    dataManager.saveMeals();
+    dataManager.notifyListeners();
 
-    // 영양소 분석 결과 페이지로 이동
+    // ✅ 결과 페이지로 이동
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(
         builder: (context) => NutritionResultPage(
           imagePath: selectedImagePath!,
-          nutrients: testNutrients,
+          nutrients: nutrients,
           selectedDate: mealDate,
           mealName: selectedMeal,
           isFromHistory: true,
@@ -183,102 +186,80 @@ class _DietRecognitionPageState extends State<DietRecognitionPage> {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: () {
-        // 화면 아무 곳이나 터치하면 키보드 닫힘
         FocusScope.of(context).unfocus();
         setState(() {
-          isDropdownVisible = false; // 키보드가 닫힐 때 드롭다운도 닫힘
+          isDropdownVisible = false;
         });
       },
       child: Scaffold(
         appBar: AppBar(title: Text("식단 인식")),
-        body: SingleChildScrollView( // 키보드가 뜰 때 Bottom Overflow 방지
-          child: Padding(
-            padding: EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 사용자가 선택한 음식 이미지 표시 (기기 저장소에서 불러오기)
-                selectedImagePath != null
-                    ? Image.file(File(selectedImagePath!), width: double.infinity, height: 250, fit: BoxFit.cover)
-                    : Image.file(widget.image, width: double.infinity, height: 250, fit: BoxFit.cover),
+        body: SingleChildScrollView(
+          padding: EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Image.file(widget.image, width: double.infinity, height: 250, fit: BoxFit.cover),
+              SizedBox(height: 10),
 
-                // 자동 인식된 식단 텍스트
-                Text("자동 인식된 식단:", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                SizedBox(height: 10),
+              if (isUploading)
+                Center(child: CircularProgressIndicator())
+              else
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text("자동 인식된 식단:", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    SizedBox(height: 10),
 
-                // 검색창 + 드롭다운 버튼
-                GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      isDropdownVisible = !isDropdownVisible;
-                    });
-                  },
-                  child: Container(
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey),
-                      borderRadius: BorderRadius.circular(8),
+                    // ✅ 검색창 내부에 X 버튼 추가
+                    TextField(
+                      controller: searchController,
+                      decoration: InputDecoration(
+                        hintText: "음식 검색",
+                        border: OutlineInputBorder(),
+                        suffixIcon: searchController.text.isNotEmpty
+                            ? IconButton(
+                          icon: Icon(Icons.clear),
+                          onPressed: _clearSearch,
+                        )
+                            : null,
+                      ),
+                      onChanged: (value) {
+                        _filterMeals(value);
+                      },
                     ),
-                    padding: EdgeInsets.symmetric(horizontal: 10),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: searchController,
-                            decoration: InputDecoration(
-                              hintText: "음식 검색",
-                              border: InputBorder.none,
-                            ),
-                            onChanged: (value) {
-                              _filterMeals(value);
-                            },
-                          ),
+
+                    // ✅ 검색 결과 개수에 따라 자동으로 높이를 조절
+                    if (isDropdownVisible)
+                      Container(
+                        constraints: BoxConstraints(
+                          maxHeight: (filteredMealOptions.length * 48.0).clamp(60.0, 180.0), // ✅ 최소 80, 최대 180으로 조정
                         ),
-                        Icon(Icons.arrow_drop_down, color: Colors.grey), // 드롭다운 버튼
-                      ],
-                    ),
-                  ),
-                ),
-
-                // 드롭다운 리스트 (검색 결과) - 검색된 개수에 맞춰 높이 조절
-                if (isDropdownVisible && filteredMealOptions.isNotEmpty)
-                  Container(
-                    constraints: BoxConstraints(
-                      maxHeight: 200, // 최대 높이 제한
-                      minHeight: (filteredMealOptions.length * 48.0).clamp(48.0, 200.0), // 최소 높이 보정
-                    ),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey),
-                      borderRadius: BorderRadius.circular(8),
-                      color: Colors.white,
-                    ),
-                    child: Scrollbar(
-                      controller: _scrollController,
-                      thumbVisibility: true,
-                      child: SingleChildScrollView(
-                        controller: _scrollController,
-                        child: Column(
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey),
+                          borderRadius: BorderRadius.circular(8),
+                          color: Colors.white,
+                        ),
+                        child: ListView(
+                          controller: _scrollController,
                           children: filteredMealOptions.map((meal) {
                             return ListTile(
                               title: Text(meal),
-                              onTap: () {
-                                _selectMeal(meal);
-                              },
+                              onTap: () => _selectMeal(meal),
                             );
                           }).toList(),
                         ),
                       ),
+
+
+                    SizedBox(height: 20),
+
+                    ElevatedButton(
+                      onPressed: proceedToAnalysis,
+                      child: Text("영양소 분석 진행"),
                     ),
-                  ),
-
-                SizedBox(height: 20),
-
-                // 영양소 분석 진행 버튼
-                ElevatedButton(
-                  onPressed: proceedToAnalysis,
-                  child: Text("영양소 분석 진행"),
+                  ],
                 ),
-              ],
-            ),
+            ],
           ),
         ),
       ),
