@@ -21,6 +21,24 @@ class DataManager extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// ✅ 식단 삭제 후 저장하는 기능 추가
+  void deleteMeal(DateTime date, String imagePath) {
+    DateTime normalizedDate = DateTime(date.year, date.month, date.day);
+
+    if (_mealRecords.containsKey(normalizedDate)) {
+      _mealRecords[normalizedDate]!.removeWhere((meal) => meal.image.path == imagePath);
+
+      // ✅ 해당 날짜의 식단이 모두 삭제되었다면, 날짜 자체를 `_mealRecords`에서 제거
+      if (_mealRecords[normalizedDate]!.isEmpty) {
+        _mealRecords.remove(normalizedDate);
+      }
+
+      saveMeals(); // ✅ 삭제 후 데이터 저장
+      notifyListeners(); // ✅ UI 업데이트
+    }
+  }
+
+
   /// 특정 날짜의 식단을 가져오는 함수
   List<Meal>? getMealsForDate(DateTime date) {
     DateTime normalizedDate = DateTime(date.year, date.month, date.day);

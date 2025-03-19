@@ -1,3 +1,4 @@
+
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:provider/provider.dart';
@@ -8,6 +9,7 @@ import '../utils/test_nutrients.dart';
 import '../utils/file_manager.dart';
 import 'nutrition_result_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../models/meal_model.dart';
 
 /// 사용자가 식단을 선택하고 영양소 분석을 진행하는 페이지
 class DietRecognitionPage extends StatefulWidget {
@@ -141,15 +143,25 @@ class _DietRecognitionPageState extends State<DietRecognitionPage> {
       return;
     }
 
-    // 📂 식단 데이터 저장 (SharedPreferences)
-    saveMealData(selectedMeal, selectedImagePath!);
+    // ✅ 기존 식단 수정 시, 기존 데이터 삭제 후 저장
+    if (widget.isEditing) {
+      List<Meal>? meals = dataManager.getMealsForDate(mealDate);
 
-    // 기존 식단 수정 시 기존 데이터 삭제 후 업데이트
-    dataManager.getMealsForDate(mealDate)
-        ?.removeWhere((meal) => widget.isEditing && meal.image.path == widget.image.path);
+      if (meals != null) {
+        meals.removeWhere((meal) => meal.image.path == widget.image.path);
 
-    // 저장된 사진 경로를 사용하여 데이터 저장
+        // ✅ 해당 날짜의 식단이 모두 삭제되었다면, 날짜 자체를 `_mealRecords`에서 제거
+        if (meals.isEmpty) {
+          dataManager.allMeals.remove(mealDate);
+        }
+
+        dataManager.saveMeals(); // ✅ 삭제 후 데이터 저장
+      }
+    }
+
+    // ✅ 새로운 식단 추가 후 저장
     dataManager.addMeal(mealDate, File(selectedImagePath!), testNutrients, selectedMeal);
+    dataManager.saveMeals(); // ✅ 추가 후 데이터 저장
 
     // 영양소 분석 결과 페이지로 이동
     Navigator.of(context).pushAndRemoveUntil(
@@ -165,6 +177,7 @@ class _DietRecognitionPageState extends State<DietRecognitionPage> {
           (route) => route.isFirst,
     );
   }
+
 
   @override
   Widget build(BuildContext context) {

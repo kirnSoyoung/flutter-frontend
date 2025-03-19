@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../utils/data_manager.dart';
 import '../widgets/nutrient_gauge.dart';
 import 'diet_recognition_page.dart';
+import '../models/meal_model.dart';
 
 /// 사용자가 선택한 식사의 영양소 분석 결과를 보여주는 페이지
 class NutritionResultPage extends StatefulWidget {
@@ -65,7 +66,7 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
     });
   }
 
-  /// 식단 삭제 기능
+  /// ✅ 식단 삭제 기능 수정 (삭제 후 데이터 저장 추가)
   void _deleteMeal() {
     final dataManager = Provider.of<DataManager>(context, listen: false);
     DateTime mealDate = widget.selectedDate ?? DateTime.now();
@@ -82,9 +83,19 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
           ),
           TextButton(
             onPressed: () {
-              dataManager.getMealsForDate(mealDate)
-                  ?.removeWhere((meal) => meal.image.path == widget.imagePath);
-              dataManager.notifyListeners();
+              List<Meal>? meals = dataManager.getMealsForDate(mealDate);
+
+              if (meals != null) {
+                meals.removeWhere((meal) => meal.image.path == widget.imagePath);
+
+                // ✅ 해당 날짜의 식단이 모두 삭제되었다면, 날짜 자체를 `_mealRecords`에서 제거
+                if (meals.isEmpty) {
+                  dataManager.allMeals.remove(mealDate);
+                }
+
+                dataManager.saveMeals(); // ✅ 삭제 후 데이터 저장
+                dataManager.notifyListeners(); // ✅ UI 업데이트
+              }
 
               Navigator.pop(context);
               _goBack(); // 삭제 후 이전 화면으로 이동
@@ -95,6 +106,7 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
       ),
     );
   }
+
 
   @override
   Widget build(BuildContext context) {
