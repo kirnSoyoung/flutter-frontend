@@ -67,6 +67,10 @@ class FileManager {
   /// ✅ **사진을 서버로 업로드하는 함수**
   static Future<Map<String, dynamic>?> uploadImageToServer(File imageFile) async {
     try {
+
+      print("📡 [DEBUG] API 요청 보냄: http://54.253.61.191:8000/upload"); // ✅ API 요청 로그 추가
+      print("📡 [DEBUG] 업로드할 파일: ${imageFile.path}"); // ✅ 업로드할 이미지 로그 추가
+
       var request = http.MultipartRequest(
         'POST',
         Uri.parse('http://54.253.61.191:8000/upload'), // 🔥 실제 서버 주소로 변경
@@ -74,7 +78,7 @@ class FileManager {
 
       var mimeType = lookupMimeType(imageFile.path);
       var fileStream = await http.MultipartFile.fromPath(
-        'image',
+        'file',
         imageFile.path,
         contentType: mimeType != null ? MediaType.parse(mimeType) : null,
       );
@@ -82,6 +86,8 @@ class FileManager {
 
       var response = await request.send();
       var responseData = await response.stream.bytesToString();
+
+      print("📡 [DEBUG] 서버 응답: ${response.statusCode} - ${responseData}"); // ✅ 서버 응답 로그 추가
 
       if (response.statusCode == 200) {
         print("✅ 업로드 성공: $responseData");

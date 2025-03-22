@@ -63,29 +63,40 @@ class _DietRecognitionPageState extends State<DietRecognitionPage> {
     setState(() {
       isUploading = true;
     });
+    print("📡 [DEBUG] _uploadAndAnalyzeImage() 호출됨. 파일 경로: ${image.path}"); // ✅ 로그 추가
 
-    var response = await FileManager.uploadImageToServer(image);
+    try {
+      var response = await FileManager.uploadImageToServer(image);
 
-    if (response != null && response['success'] == true) {
-      List<dynamic> foodList = response['recognized_foods'];
+      if (response != null && response['success'] == true) {
+        print("📡 [DEBUG] API 요청 성공! 받은 데이터: $response");
 
-      setState(() {
-        recognizedFoods = foodList.map((food) => food['food_name'] as String).toList();
-        nutrients = foodList.isNotEmpty ? foodList.first['nutrients'] : {};
+        List<dynamic> foodList = response['recognized_foods'];
 
-        if (recognizedFoods.isNotEmpty) {
-          selectedMeal = recognizedFoods.first;
-          searchController.text = selectedMeal;
-        }
+        setState(() {
+          recognizedFoods = foodList.map((food) => food['food_name'] as String).toList();
+          nutrients = foodList.isNotEmpty ? foodList.first['nutrients'] : {};
 
-        isUploading = false;
-      });
-    } else {
-      print("❌ 음식 인식 실패");
+          if (recognizedFoods.isNotEmpty) {
+            selectedMeal = recognizedFoods.first;
+            searchController.text = selectedMeal;
+          }
+
+          isUploading = false;
+        });
+      } else {
+        print("❌ 음식 인식 실패: 응답 내용이 없거나 실패 표시");
+        setState(() {
+          isUploading = false;
+        });
+      }
+    } catch (e) {
+      print("❌ API 요청 중 예외 발생: $e");
       setState(() {
         isUploading = false;
       });
     }
+
   }
 
   Future<void> _loadFoodList() async {
