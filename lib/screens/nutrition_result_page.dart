@@ -61,20 +61,24 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
             _nutrients = Map<String, double>.from(data['nutrients']);
             _isLoading = false;
           });
-        } else {
-          print("❌ 서버 응답 실패: ${data['message']}");
+          return;
         }
-      } else {
-        print("❌ 서버 오류: ${response.reasonPhrase}");
       }
-    } catch (e) {
-      print("❌ API 요청 중 오류 발생: $e");
-    } finally {
+      // 서버 실패 → widget에서 받은 nutrients 사용
+      print("❌ 서버에서 데이터 못 받음, fallback 사용");
       setState(() {
+        _nutrients = widget.nutrients;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print("❌ API 예외 발생, fallback 사용: $e");
+      setState(() {
+        _nutrients = widget.nutrients;
         _isLoading = false;
       });
     }
   }
+
 
   /// 이전 화면으로 이동
   void _goBack() {
