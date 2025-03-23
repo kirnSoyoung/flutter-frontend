@@ -1,6 +1,5 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// 150개의 미리 정의된 한글 음식 리스트
 const List<String> predefinedFoodList = [
   "갈비구이", "갈치구이", "고등어구이", "곱창구이", "닭갈비",
   "더덕구이", "떡갈비", "불고기", "삼겹살", "장어구이",
@@ -43,7 +42,6 @@ Future<void> saveFoodList() async {
   await prefs.setStringList('food_list', predefinedFoodList);
 }
 
-/// 저장된 음식 리스트를 불러오는 함수
 Future<List<String>> loadFoodList() async {
   final prefs = await SharedPreferences.getInstance();
   return prefs.getStringList('food_list') ?? predefinedFoodList;

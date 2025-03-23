@@ -1,13 +1,14 @@
-import 'package:flutter/material.dart';
 import 'dart:io';
-import 'package:provider/provider.dart';
+
+import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import '../utils/data_manager.dart';
-import '../utils/food_list.dart';
-import '../utils/file_manager.dart';
-import 'nutrition_result_page.dart';
+import 'package:provider/provider.dart';
+
 import '../models/meal_model.dart';
-import 'package:http_parser/http_parser.dart';
+import '../utils/data_manager.dart';
+import '../utils/file_manager.dart';
+import '../utils/food_list.dart';
+import 'nutrition_result_page.dart';
 
 class DietRecognitionPage extends StatefulWidget {
   final File image;
@@ -46,31 +47,26 @@ class _DietRecognitionPageState extends State<DietRecognitionPage> {
     _uploadAndAnalyzeImage(widget.image);
   }
 
-  /// 📂 **사진을 앱 내부 저장소에 저장하는 함수**
-  void _saveMealImage(File imageFile) async {
+  /// 사진을 앱 내부 저장소에 저장하는 함수
+  Future<void> _saveMealImage(File imageFile) async {
     String? savedPath = await FileManager.saveImageToStorage(XFile(imageFile.path));
     if (savedPath != null) {
       setState(() {
         selectedImagePath = savedPath;
       });
-    } else {
-      print("❌ 사진 저장 실패");
     }
   }
 
-  /// ✅ 사진을 업로드하고, 서버에서 음식 정보를 받아오는 함수
+  /// 사진을 업로드하고, 서버에서 음식 정보를 받아오는 함수
   Future<void> _uploadAndAnalyzeImage(File image) async {
     setState(() {
       isUploading = true;
     });
-    print("📡 [DEBUG] _uploadAndAnalyzeImage() 호출됨. 파일 경로: ${image.path}"); // ✅ 로그 추가
 
     try {
       var response = await FileManager.uploadImageToServer(image);
 
       if (response != null && response['success'] == true) {
-        print("📡 [DEBUG] API 요청 성공! 받은 데이터: $response");
-
         List<dynamic> foodList = response['recognized_foods'];
 
         setState(() {
@@ -96,7 +92,6 @@ class _DietRecognitionPageState extends State<DietRecognitionPage> {
         isUploading = false;
       });
     }
-
   }
 
   Future<void> _loadFoodList() async {
@@ -138,7 +133,6 @@ class _DietRecognitionPageState extends State<DietRecognitionPage> {
     });
   }
 
-  /// ✅ X 버튼 클릭 시 검색창 초기화
   void _clearSearch() {
     setState(() {
       searchController.clear();
@@ -150,18 +144,14 @@ class _DietRecognitionPageState extends State<DietRecognitionPage> {
     final dataManager = Provider.of<DataManager>(context, listen: false);
     final DateTime mealDate = widget.selectedDate ?? DateTime.now();
 
-    if (selectedImagePath == null) {
-      print("❌ 사진 경로 없음.");
-      return;
-    }
+    if (selectedImagePath == null) return;
 
-    // ✅ 기존 데이터 삭제 로직 개선 (삭제 버튼과 동일한 방식 적용)
     if (widget.isEditing) {
       List<Meal>? meals = dataManager.getMealsForDate(mealDate);
 
       if (meals != null) {
         meals.removeWhere((meal) =>
-        File(meal.image.path).absolute.path == File(widget.image.path).absolute.path); // ✅ 정확한 경로 비교
+        File(meal.image.path).absolute.path == File(widget.image.path).absolute.path);
 
         if (meals.isEmpty) {
           dataManager.allMeals.remove(mealDate);
@@ -172,12 +162,10 @@ class _DietRecognitionPageState extends State<DietRecognitionPage> {
       }
     }
 
-    // ✅ 새로운 식단 추가 후 저장
     dataManager.addMeal(mealDate, File(selectedImagePath!), nutrients, selectedMeal);
     dataManager.saveMeals();
     dataManager.notifyListeners();
 
-    // ✅ 결과 페이지로 이동
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(
         builder: (context) => NutritionResultPage(
@@ -191,7 +179,6 @@ class _DietRecognitionPageState extends State<DietRecognitionPage> {
           (route) => route.isFirst,
     );
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -221,7 +208,6 @@ class _DietRecognitionPageState extends State<DietRecognitionPage> {
                     Text("자동 인식된 식단:", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                     SizedBox(height: 10),
 
-                    // ✅ 검색창 내부에 X 버튼 추가
                     TextField(
                       controller: searchController,
                       decoration: InputDecoration(
@@ -229,21 +215,18 @@ class _DietRecognitionPageState extends State<DietRecognitionPage> {
                         border: OutlineInputBorder(),
                         suffixIcon: searchController.text.isNotEmpty
                             ? IconButton(
-                          icon: Icon(Icons.clear),
-                          onPressed: _clearSearch,
-                        )
+                              icon: Icon(Icons.clear),
+                              onPressed: _clearSearch,
+                            )
                             : null,
                       ),
-                      onChanged: (value) {
-                        _filterMeals(value);
-                      },
+                        onChanged: _filterMeals,
                     ),
 
-                    // ✅ 검색 결과 개수에 따라 자동으로 높이를 조절
                     if (isDropdownVisible)
                       Container(
                         constraints: BoxConstraints(
-                          maxHeight: (filteredMealOptions.length * 48.0).clamp(60.0, 180.0), // ✅ 최소 80, 최대 180으로 조정
+                          maxHeight: (filteredMealOptions.length * 48.0).clamp(60.0, 180.0),
                         ),
                         decoration: BoxDecoration(
                           border: Border.all(color: Colors.grey),
@@ -260,7 +243,6 @@ class _DietRecognitionPageState extends State<DietRecognitionPage> {
                           }).toList(),
                         ),
                       ),
-
 
                     SizedBox(height: 20),
 

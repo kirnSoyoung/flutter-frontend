@@ -1,12 +1,14 @@
 import 'dart:io';
+
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../utils/data_manager.dart';
-import 'package:intl/intl.dart';
-import 'package:intl/date_symbol_data_local.dart';
 import 'package:image_picker/image_picker.dart';
-import '../screens/nutrition_result_page.dart';
+import 'package:intl/date_symbol_data_local.dart';
+import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
+
 import '../screens/diet_recognition_page.dart';
+import '../screens/nutrition_result_page.dart';
+import '../utils/data_manager.dart';
 
 class HistoryPage extends StatefulWidget {
   @override
@@ -25,27 +27,23 @@ class _HistoryPageState extends State<HistoryPage> {
     _selectedDate = DateTime.now();
   }
 
-  /// ✅ 해당 날짜가 속한 주의 시작일 (일요일부터 시작)
   DateTime _getWeekStart(DateTime date) {
     int weekday = date.weekday;
     return date.subtract(Duration(days: weekday % 7));
   }
 
-  /// ✅ 다음 주로 이동
   void _nextWeek() {
     setState(() {
       _currentWeekStart = _currentWeekStart.add(Duration(days: 7));
     });
   }
 
-  /// ✅ 이전 주로 이동
   void _previousWeek() {
     setState(() {
       _currentWeekStart = _currentWeekStart.subtract(Duration(days: 7));
     });
   }
 
-  /// ✅ 날짜 클릭 시 선택된 날짜 변경
   void _selectDate(DateTime date) {
     setState(() {
       _selectedDate = date;
@@ -64,27 +62,19 @@ class _HistoryPageState extends State<HistoryPage> {
         padding: EdgeInsets.all(16.0),
         child: Column(
           children: [
-            // ✅ 주간 네비게이션
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                IconButton(
-                  icon: Icon(Icons.arrow_back),
-                  onPressed: _previousWeek,
-                ),
+                IconButton(icon: Icon(Icons.arrow_back), onPressed: _previousWeek),
                 Text(
-                  "< ${DateFormat.yMMMM('ko_KR').format(_currentWeekStart)} >",
+                  DateFormat.yMMMM('ko_KR').format(_currentWeekStart),
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
-                IconButton(
-                  icon: Icon(Icons.arrow_forward),
-                  onPressed: _nextWeek,
-                ),
+                IconButton(icon: Icon(Icons.arrow_forward), onPressed: _nextWeek),
               ],
             ),
             SizedBox(height: 10),
 
-            // ✅ 요일 헤더 (일요일~토요일)
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: ["일", "월", "화", "수", "목", "금", "토"]
@@ -93,7 +83,6 @@ class _HistoryPageState extends State<HistoryPage> {
             ),
             SizedBox(height: 5),
 
-            // ✅ 현재 주 날짜 표시 (삭제 후 초록색 점 제거)
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: weekDays.map((date) {
@@ -116,7 +105,7 @@ class _HistoryPageState extends State<HistoryPage> {
                         height: 6,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: hasMeal ? Colors.green : Colors.transparent, // ✅ 식단이 없으면 점 제거
+                          color: hasMeal ? Colors.green : Colors.transparent,
                         ),
                       ),
                     ],
@@ -126,7 +115,6 @@ class _HistoryPageState extends State<HistoryPage> {
             ),
             SizedBox(height: 20),
 
-            // ✅ 현재 주에 등록된 식단 사진들 (클릭 가능 → 영양소 분석 페이지 이동)
             Expanded(
               child: ListView.builder(
                 itemCount: weekDays.length,

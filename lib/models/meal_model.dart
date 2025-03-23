@@ -7,18 +7,17 @@ class Meal {
 
   Meal({required this.image, required this.nutrients, required this.mealName});
 
-  Map<String, dynamic> toMap() =>
-      {
-        "imagePath": image.path,
-        "nutrients": nutrients,
-        "mealName": mealName,
-      };
+  Map<String, dynamic> toJson() => {
+    'imagePath': image.path,
+    'nutrients': nutrients,
+    'mealName': mealName,
+  };
 
-  static Meal fromMap(Map<String, dynamic> map) {
+  factory Meal.fromJson(Map<String, dynamic> json) {
     return Meal(
-      image: File(map['imagePath']),
-      nutrients: Map<String, double>.from(map['nutrients']),
-      mealName: map['mealName'],
+      image: File(json['imagePath']),
+      nutrients: Map<String, double>.from(json['nutrients']),
+      mealName: json['mealName'],
     );
   }
 }

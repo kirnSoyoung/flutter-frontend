@@ -1,9 +1,12 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'dart:convert';
 import 'package:http/http.dart' as http;
-import '../utils/data_manager.dart';
 import 'package:url_launcher/url_launcher.dart';
+
+import '../utils/data_manager.dart';
+import '../utils/api_service.dart';
 
 class SupplementPage extends StatefulWidget {
   @override
@@ -61,11 +64,10 @@ class _SupplementPageState extends State<SupplementPage> {
     });
   }
 
-  /// ✅ 서버에서 영양제 추천 받아오기
   Future<List<Map<String, String>>> fetchSupplementsFromServer(String nutrient) async {
     try {
       final response = await http.get(Uri.parse(
-        "http://your-server.com/supplements?nutrient=${Uri.encodeComponent(nutrient)}",
+        "http://54.253.61.191:8000//supplements?nutrient=${Uri.encodeComponent(nutrient)}",
       ));
 
       if (response.statusCode == 200) {
@@ -82,10 +84,9 @@ class _SupplementPageState extends State<SupplementPage> {
       print("❌ 영양제 API 호출 오류: $e");
     }
 
-    return []; // 실패 시 빈 리스트 반환
+    return [];
   }
 
-  /// ✅ 외부 링크 열기
   void _openSupplementPage(String url) async {
     if (await canLaunchUrl(Uri.parse(url))) {
       await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
@@ -97,7 +98,7 @@ class _SupplementPageState extends State<SupplementPage> {
   /// ✅ 추천 리스트 UI
   Widget _buildSupplementSection(String nutrient) {
     return FutureBuilder<List<Map<String, String>>>(
-      future: fetchSupplementsFromServer(nutrient),
+      future: ApiService.fetchSupplements(nutrient),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Padding(

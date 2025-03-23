@@ -1,14 +1,14 @@
-import 'package:flutter/material.dart';
 import 'dart:io';
+
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
+
+import '../models/meal_model.dart';
+import '../utils/api_service.dart';
 import '../utils/data_manager.dart';
 import '../widgets/nutrient_gauge.dart';
 import 'diet_recognition_page.dart';
-import '../models/meal_model.dart';
 
-/// 사용자가 선택한 식사의 영양소 분석 결과를 보여주는 페이지
 class NutritionResultPage extends StatefulWidget {
   final String imagePath;
   final Map<String, double> nutrients;
@@ -45,47 +45,21 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
       );
       _mealAdded = true;
     }
-    _fetchNutrientData();
+    _loadNutrientData();
   }
 
-  /// ✅ 서버에서 음식 영양소 데이터를 불러오는 함수
-  Future<void> _fetchNutrientData() async {
-    try {
-      final response = await http.get(Uri.parse(
-          "https://yourserver.com/food/nutrients?food_name=${Uri.encodeComponent(widget.mealName)}"));
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        if (data['success']) {
-          setState(() {
-            _nutrients = Map<String, double>.from(data['nutrients']);
-            _isLoading = false;
-          });
-          return;
-        }
-      }
-      // 서버 실패 → widget에서 받은 nutrients 사용
-      print("❌ 서버에서 데이터 못 받음, fallback 사용");
-      setState(() {
-        _nutrients = widget.nutrients;
-        _isLoading = false;
-      });
-    } catch (e) {
-      print("❌ API 예외 발생, fallback 사용: $e");
-      setState(() {
-        _nutrients = widget.nutrients;
-        _isLoading = false;
-      });
-    }
+  Future<void> _loadNutrientData() async {
+    final data = await ApiService.fetchNutrientsByName(widget.mealName);
+    setState(() {
+      _nutrients = data ?? widget.nutrients;
+      _isLoading = false;
+    });
   }
 
-
-  /// 이전 화면으로 이동
   void _goBack() {
     Navigator.pop(context);
   }
 
-  /// 식단 수정 페이지로 이동
   void _editMeal() {
     Navigator.push(
       context,
@@ -139,10 +113,12 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async {
-        _goBack();
-        return false;
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) {
+          _goBack();
+        }
       },
       child: Scaffold(
         appBar: AppBar(
@@ -168,29 +144,32 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
           padding: EdgeInsets.all(16.0),
           child: Column(
             children: [
-              Image.file(File(widget.imagePath), width: double.infinity, height: 250, fit: BoxFit.cover),
+              Image.file(
+                  File(widget.imagePath),
+                  width: double.infinity,
+                  height: 250,
+                  fit: BoxFit.cover
+              ),
               SizedBox(height: 20),
-
               Text(
                 "현재 등록된 식단: ${widget.mealName}",
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               SizedBox(height: 10),
-
               _isLoading
                   ? Center(child: CircularProgressIndicator())
                   : Expanded(
-                child: ListView(
-                  children: _nutrients.entries.map((entry) {
-                    return NutrientGauge(
-                      label: entry.key,
-                      currentValue: entry.value,
-                      mealsPerDay: 3,
-                      isDailyTotal: false,
-                    );
-                  }).toList(),
-                ),
-              ),
+                    child: ListView(
+                      children: _nutrients.entries.map((entry) {
+                        return NutrientGauge(
+                          label: entry.key,
+                          currentValue: entry.value,
+                          mealsPerDay: 3,
+                          isDailyTotal: false,
+                        );
+                      }).toList(),
+                    ),
+                  ),
             ],
           ),
         ),

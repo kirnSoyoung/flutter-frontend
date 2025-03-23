@@ -1,15 +1,16 @@
-import 'package:flutter/material.dart';
 import 'dart:io';
+
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../widgets/image_picker_widget.dart';
-import '../widgets/nutrient_gauge.dart';
+
 import '../utils/data_manager.dart';
 import '../utils/nutrition_standards.dart';
+import '../widgets/image_picker_widget.dart';
+import '../widgets/nutrient_gauge.dart';
 import 'diet_recognition_page.dart';
 
-/// 사용자가 사진을 찍고, 식단의 영양소를 분석할 수 있는 메인 페이지
 class HomePage extends StatefulWidget {
-  final String email; // 로그인한 사용자의 이메일
+  final String email;
 
   HomePage(this.email);
 
@@ -20,7 +21,6 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   final int mealsPerDay = 3; // 하루 식사 횟수 (기본 3회)
 
-  /// 사용자가 사진을 선택하면 식단 분석 페이지로 이동
   void setImage(File image) {
     Navigator.push(
       context,
@@ -28,7 +28,7 @@ class _HomePageState extends State<HomePage> {
         builder: (context) => DietRecognitionPage(image: image),
       ),
     ).then((_) {
-      setState(() {}); // 식단 분석 후 UI 업데이트
+      setState(() {});
     });
   }
 
@@ -45,7 +45,10 @@ class _HomePageState extends State<HomePage> {
                 List meals = dataManager.getMealsForDate(today) ?? [];
 
                 // 하루 영양소 총량 계산
-                Map<String, double> dailyIntake = { for (var key in averageDailyRequirements.keys) key: 0.0 };
+                Map<String, double> dailyIntake = {
+                  for (var key in averageDailyRequirements.keys) key: 0.0
+                };
+
                 for (var meal in meals) {
                   meal.nutrients.forEach((key, value) {
                     if (dailyIntake.containsKey(key)) {
@@ -76,7 +79,7 @@ class _HomePageState extends State<HomePage> {
               },
             ),
           ),
-          ImagePickerWidget(onImageSelected: setImage), // 사진 선택 위젯
+          ImagePickerWidget(onImageSelected: setImage),
         ],
       ),
     );
