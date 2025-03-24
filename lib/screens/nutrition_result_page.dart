@@ -50,10 +50,31 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
 
   Future<void> _loadNutrientData() async {
     final data = await ApiService.fetchNutrientsByName(widget.mealName);
+    final updatedNutrients = data ?? widget.nutrients;
     setState(() {
-      _nutrients = data ?? widget.nutrients;
+      _nutrients = updatedNutrients;
       _isLoading = false;
     });
+
+    final dataManager = Provider.of<DataManager>(context, listen: false);
+    final mealDate = widget.selectedDate ?? DateTime.now();
+    final meals = dataManager.getMealsForDate(mealDate);
+
+    if (meals != null) {
+      for (var meal in meals) {
+        if (meal.image.path == widget.imagePath) {
+          meals.remove(meal);
+          meals.add(Meal(
+            image: File(widget.imagePath),
+            nutrients: updatedNutrients,
+            mealName: widget.mealName,
+          ));
+          dataManager.saveMeals();
+          dataManager.notifyListeners();
+          break;
+        }
+      }
+    }
   }
 
   void _goBack() {

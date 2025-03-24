@@ -2,12 +2,16 @@ import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
+import '../utils/test_nutrients.dart';
+
 class ApiService {
   static const String baseUrl = "http://54.253.61.191:8000";
 
   static Future<Map<String, double>?> fetchNutrientsByName(String foodName) async {
     try {
-      final response = await http.get(Uri.parse("$baseUrl/food/nutrients?food_name=${Uri.encodeComponent(foodName)}"));
+      final response = await http.get(
+        Uri.parse("$baseUrl/food/nutrients?food_name=${Uri.encodeComponent(foodName)}"),
+      );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
@@ -18,7 +22,9 @@ class ApiService {
     } catch (e) {
       print("❌ fetchNutrientsByName 예외 발생: $e");
     }
-    return null;
+
+    print("⚠️ API 실패 또는 데이터 없음. 임시 testNutrients 사용");
+    return testNutrients;
   }
 
   static Future<List<Map<String, String>>> fetchSupplements(String nutrient) async {
