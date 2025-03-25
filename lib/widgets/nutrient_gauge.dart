@@ -32,7 +32,7 @@ class NutrientGauge extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          "$label: ${currentValue.toStringAsFixed(1)} $unit (${percentage.toStringAsFixed(1)}%)",
+          "$label: ${currentValue.toStringAsFixed(1)} (${percentage.toStringAsFixed(1)}%)",
           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         Stack(

@@ -8,6 +8,26 @@ import 'package:url_launcher/url_launcher.dart';
 import '../utils/data_manager.dart';
 import '../utils/api_service.dart';
 
+
+const List<Map<String, String>> dummySupplements = [
+  {
+    "name": "테스트 영양제 A",
+    "image": "https://via.placeholder.com/100",
+    "url": "https://example.com/supplementA",
+  },
+  {
+    "name": "테스트 영양제 B",
+    "image": "https://via.placeholder.com/100",
+    "url": "https://example.com/supplementB",
+  },
+  {
+    "name": "테스트 영양제 C",
+    "image": "https://via.placeholder.com/100",
+    "url": "https://example.com/supplementC",
+  },
+];
+
+
 class SupplementPage extends StatefulWidget {
   @override
   _SupplementPageState createState() => _SupplementPageState();
@@ -100,21 +120,8 @@ class _SupplementPageState extends State<SupplementPage> {
     return FutureBuilder<List<Map<String, String>>>(
       future: ApiService.fetchSupplements(nutrient),
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return Padding(
-            padding: EdgeInsets.symmetric(vertical: 20),
-            child: Center(child: CircularProgressIndicator()),
-          );
-        }
-
-        if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return Padding(
-            padding: EdgeInsets.symmetric(vertical: 20),
-            child: Text("$nutrient 에 대한 추천 정보를 불러올 수 없습니다."),
-          );
-        }
-
-        final supplements = snapshot.data!;
+        bool hasData = snapshot.hasData && snapshot.data!.isNotEmpty;
+        final supplements = hasData ? snapshot.data! : dummySupplements;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -130,7 +137,15 @@ class _SupplementPageState extends State<SupplementPage> {
                 scrollDirection: Axis.horizontal,
                 children: supplements.map((supplement) {
                   return GestureDetector(
-                    onTap: () => _openSupplementPage(supplement["url"]!),
+                    onTap: () {
+                      if (hasData) {
+                        _openSupplementPage(supplement["url"]!);
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text("URL이 아직 준비되지 않았습니다.")),
+                        );
+                      }
+                    },
                     child: Container(
                       width: 120,
                       margin: EdgeInsets.only(right: 10),
@@ -163,6 +178,7 @@ class _SupplementPageState extends State<SupplementPage> {
       },
     );
   }
+
 
   @override
   Widget build(BuildContext context) {
