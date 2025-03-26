@@ -21,21 +21,23 @@ class SharedPrefs {
   }
 
   static Future<void> saveUser(User user) async {
-    final prefs = await SharedPreferences.getInstance();
-    List<User> users = await getUsers();
+    print("👀 saveUser() 호출됨");
 
-    final index = users.indexWhere((u) => u.email == user.email);
-    if (index != -1) {
-      users[index] = user;
-    } else {
-      users.add(user);
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? usersJson = prefs.getString("users");
+
+    List<User> users = [];
+    if (usersJson != null) {
+      users = (jsonDecode(usersJson) as List)
+          .map((data) => User.fromJson(data))
+          .toList();
     }
-    await prefs.setString(
-      'users',
-      jsonEncode(users.map((u) => u.toJson()).toList()),
-    );
-    await prefs.setString('loggedInEmail', user.email);
-    await prefs.setString('loggedInPassword', user.password);
+
+    users.add(user);
+
+    await prefs.setString("users", jsonEncode(users.map((u) => u.toJson()).toList()));
+
+    print("✅ saveUser() 완료");
   }
 
   /// 자동 로그인 정보 저장

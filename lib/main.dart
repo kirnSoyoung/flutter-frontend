@@ -4,10 +4,12 @@ import 'package:provider/provider.dart';
 
 import 'screens/login_page.dart';
 import 'screens/navigation_bar.dart';
+import 'screens/onboarding_page.dart';
 import 'utils/data_manager.dart';
 import 'utils/food_list.dart';
 import 'utils/shared_prefs.dart';
 
+import 'theme/app_theme.dart';
 import '../models/user_model.dart';
 
 void main() async {
@@ -38,9 +40,26 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
+      theme: AppTheme.theme,
       home: loggedInUser != null
           ? MainScreen(email: loggedInUser!.email)
-          : LoginPage(),
+          : OnboardingPage(),
+      builder: (context, child) {
+        ErrorWidget.builder = (FlutterErrorDetails details) {
+          return Material(
+            child: Container(
+              color: Colors.white,
+              child: Center(
+                child: Text(
+                  '앱을 다시 실행해주세요.',
+                  style: TextStyle(fontSize: 16),
+                ),
+              ),
+            ),
+          );
+        };
+        return child ?? Container();
+      },
     );
   }
 }
