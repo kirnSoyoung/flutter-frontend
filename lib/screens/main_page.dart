@@ -8,6 +8,7 @@ import '../widgets/image_picker_widget.dart';
 import '../widgets/nutrient_gauge.dart';
 import '../theme/app_theme.dart';
 import 'diet_recognition_page.dart';
+import 'nutrition_result_page.dart';
 
 class HomePage extends StatefulWidget {
   final String email;
@@ -177,14 +178,30 @@ class _HomePageState extends State<HomePage> {
                             scrollDirection: Axis.horizontal,
                             itemCount: meals.length,
                             itemBuilder: (context, index) {
-                              return Container(
-                                width: 120,
-                                margin: EdgeInsets.only(right: 12),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(12),
-                                  image: DecorationImage(
-                                    image: FileImage(meals[index].image),
-                                    fit: BoxFit.cover,
+                              return GestureDetector(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => NutritionResultPage(
+                                        imagePath: meals[index].image.path,
+                                        nutrients: meals[index].nutrients,
+                                        selectedDate: DateTime.now(),
+                                        mealName: meals[index].mealName,
+                                        isFromHistory: true,
+                                      ),
+                                    ),
+                                  );
+                                },
+                                child: Container(
+                                  width: 120,
+                                  margin: EdgeInsets.only(right: 12),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(12),
+                                    image: DecorationImage(
+                                      image: FileImage(meals[index].image),
+                                      fit: BoxFit.cover,
+                                    ),
                                   ),
                                 ),
                               );

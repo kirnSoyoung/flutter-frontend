@@ -48,7 +48,7 @@ class FileManager {
   static Future<Map<String, dynamic>?> uploadImageToServer(File imageFile) async {
     try {
 
-      print("📡 [DEBUG] API 요청 보냄: http://54.253.61.191:8000/upload"); // ✅ API 요청 로그 추가
+      print("📡 [DEBUG] API 요청 보냄: http://54.253.61.191:8000/s3/upload"); // ✅ API 요청 로그 추가
       print("📡 [DEBUG] 업로드할 파일: ${imageFile.path}"); // ✅ 업로드할 이미지 로그 추가
 
       var request = http.MultipartRequest(
