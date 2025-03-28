@@ -31,7 +31,6 @@ class NutritionResultPage extends StatefulWidget {
 
 class _NutritionResultPageState extends State<NutritionResultPage> {
   bool _isLoading = true;
-  bool _showAll = false;
   bool _isSaved = false;
   Map<String, double> _nutrients = {};
 
@@ -109,23 +108,32 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
   }
 
   Widget _buildBottomButtons() {
-    // 🔽 버튼 하단 고정 및 조건별 렌더링
-    if (widget.isFromHistory) {
-      return Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          ElevatedButton.icon(
-            onPressed: _deleteMeal,
-            icon: Icon(Icons.delete),
-            label: Text("삭제하기"),
+    // 🔽 버튼 UI 스타일 수정 (이미지 참고 기반)
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          width: double.infinity,
+          height: 50,
+          child: ElevatedButton(
+            onPressed: widget.isFromHistory ? _deleteMeal : _saveMeal,
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
+              backgroundColor: widget.isFromHistory ? Colors.red : Color(0xFF4CAF50),
               foregroundColor: Colors.white,
-              minimumSize: Size(160, 48),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8.0),
+              ),
+            ),
+            child: Text(
+              widget.isFromHistory ? "삭제하기" : "식단 저장하기",
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
             ),
           ),
-          ElevatedButton.icon(
-            onPressed: () {
+        ),
+        SizedBox(height: 12),
+        Center(
+          child: GestureDetector(
+            onTap: () {
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(
@@ -138,51 +146,18 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
                 ),
               );
             },
-            icon: Icon(Icons.refresh),
-            label: Text("다시 분석하기"),
-            style: ElevatedButton.styleFrom(
-              minimumSize: Size(160, 48),
+            child: Text(
+              "다시 분석하기",
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 14,
+                decoration: TextDecoration.underline,
+              ),
             ),
           ),
-        ],
-      );
-    } else {
-      return Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-        children: [
-          ElevatedButton.icon(
-            onPressed: _saveMeal,
-            icon: Icon(Icons.save),
-            label: Text("식단 저장하기"),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).primaryColor,
-              foregroundColor: Colors.white,
-              minimumSize: Size(160, 48),
-            ),
-          ),
-          ElevatedButton.icon(
-            onPressed: () {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => DietRecognitionPage(
-                    image: File(widget.imagePath),
-                    selectedDate: widget.selectedDate,
-                    initialMealName: widget.mealName,
-                    isEditing: true,
-                  ),
-                ),
-              );
-            },
-            icon: Icon(Icons.refresh),
-            label: Text("다시 분석하기"),
-            style: ElevatedButton.styleFrom(
-              minimumSize: Size(160, 48),
-            ),
-          ),
-        ],
-      );
-    }
+        ),
+      ],
+    );
   }
 
   @override

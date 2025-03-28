@@ -5,9 +5,9 @@ import 'package:provider/provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 
+import '../theme/app_theme.dart';
 import '../utils/data_manager.dart';
 import '../utils/api_service.dart';
-
 
 const List<Map<String, String>> dummySupplements = [
   {
@@ -27,10 +27,11 @@ const List<Map<String, String>> dummySupplements = [
   },
 ];
 
-
 class SupplementPage extends StatefulWidget {
+  const SupplementPage({super.key});
+
   @override
-  _SupplementPageState createState() => _SupplementPageState();
+  State<SupplementPage> createState() => _SupplementPageState();
 }
 
 class _SupplementPageState extends State<SupplementPage> {
@@ -42,7 +43,6 @@ class _SupplementPageState extends State<SupplementPage> {
     _calculateWeeklyDeficiencies();
   }
 
-  /// ✅ 영양소 결핍 계산 로직
   void _calculateWeeklyDeficiencies() {
     final dataManager = Provider.of<DataManager>(context, listen: false);
     final now = DateTime.now();
@@ -61,7 +61,6 @@ class _SupplementPageState extends State<SupplementPage> {
       }
     }
 
-    // 기준 섭취량
     final standards = {
       "비타민 C": 100.0,
       "철분": 18.0,
@@ -115,26 +114,40 @@ class _SupplementPageState extends State<SupplementPage> {
     }
   }
 
-  /// ✅ 추천 리스트 UI
   Widget _buildSupplementSection(String nutrient) {
     return FutureBuilder<List<Map<String, String>>>(
-      future: ApiService.fetchSupplements(nutrient),
+      future: fetchSupplementsFromServer(nutrient),
       builder: (context, snapshot) {
         bool hasData = snapshot.hasData && snapshot.data!.isNotEmpty;
         final supplements = hasData ? snapshot.data! : dummySupplements;
 
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              "$nutrient 영양제 추천",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 10),
-            SizedBox(
-              height: 150,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
+        return Container(
+          margin: EdgeInsets.only(bottom: 24),
+          padding: EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black12,
+                blurRadius: 6,
+                offset: Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                nutrient,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black87,
+                ),
+              ),
+              SizedBox(height: 12),
+              Row(
                 children: supplements.map((supplement) {
                   return GestureDetector(
                     onTap: () {
@@ -147,21 +160,27 @@ class _SupplementPageState extends State<SupplementPage> {
                       }
                     },
                     child: Container(
-                      width: 120,
-                      margin: EdgeInsets.only(right: 10),
+                      width: 100,
+                      margin: EdgeInsets.only(right: 12),
                       child: Column(
                         children: [
-                          Image.network(
-                            supplement["image"]!,
-                            width: 100,
-                            height: 100,
-                            fit: BoxFit.cover,
-                          ),
-                          SizedBox(height: 5),
+                          if (supplement["image"] != null &&
+                              supplement["image"]!.startsWith("http"))
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.network(
+                                supplement["image"]!,
+                                width: 100,
+                                height: 100,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) => SizedBox.shrink(),
+                              ),
+                            ),
+                          SizedBox(height: 8),
                           Text(
                             supplement["name"]!,
                             textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 14),
+                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
@@ -171,27 +190,58 @@ class _SupplementPageState extends State<SupplementPage> {
                   );
                 }).toList(),
               ),
-            ),
-            SizedBox(height: 20),
-          ],
+            ],
+          ),
         );
       },
     );
   }
 
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text("영양제 추천")),
-      body: Padding(
-        padding: EdgeInsets.all(16.0),
-        child: topDeficiencies.isEmpty
-            ? Center(child: Text("최근 일주일간 분석할 식단이 없습니다."))
-            : ListView(
-          children: topDeficiencies
-              .map((nutrient) => _buildSupplementSection(nutrient))
-              .toList(),
+      backgroundColor: AppTheme.backgroundColor,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryColor.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.medical_services, color: AppTheme.primaryColor, size: 20),
+                    SizedBox(width: 6),
+                    Text(
+                      "영양제 추천",
+                      style: TextStyle(
+                        color: AppTheme.primaryColor,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: 20),
+              Expanded(
+                child: topDeficiencies.isEmpty
+                    ? Center(child: Text("최근 일주일간 분석할 식단이 없습니다."))
+                    : ListView(
+                  children: topDeficiencies
+                      .map((nutrient) => _buildSupplementSection(nutrient))
+                      .toList(),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

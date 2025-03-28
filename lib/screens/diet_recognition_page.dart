@@ -161,11 +161,6 @@ class _DietRecognitionPageState extends State<DietRecognitionPage> {
         dataManager.notifyListeners();
       }
     }
-
-    dataManager.addMeal(mealDate, File(selectedImagePath!), nutrients, selectedMeal);
-    dataManager.saveMeals();
-    dataManager.notifyListeners();
-
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(
         builder: (context) => NutritionResultPage(
@@ -173,7 +168,7 @@ class _DietRecognitionPageState extends State<DietRecognitionPage> {
           nutrients: nutrients,
           selectedDate: mealDate,
           mealName: selectedMeal,
-          isFromHistory: true,
+          isFromHistory: false,
         ),
       ),
           (route) => route.isFirst,

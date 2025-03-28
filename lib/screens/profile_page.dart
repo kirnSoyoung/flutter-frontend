@@ -1,11 +1,10 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
-
+import '../theme/app_theme.dart';
 import '../models/user_model.dart';
 import '../utils/shared_prefs.dart';
-import '../widgets/custom_dropdown.dart';
-import '../widgets/custom_input_field.dart';
-import '../widgets/custom_labeled_dropdown.dart';
 import 'login_page.dart';
+import 'edit_profile_page.dart'; // ✅ 정보 수정 페이지 추가
 
 class ProfilePage extends StatefulWidget {
   @override
@@ -13,55 +12,21 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  late TextEditingController ageController;
-  late TextEditingController heightController;
-  late TextEditingController weightController;
-  String selectedGender = "남성";
-  String activityLevel = "보통";
+  User? currentUser;
   bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    ageController = TextEditingController();
-    heightController = TextEditingController();
-    weightController = TextEditingController();
-    _loadUserData();
+    _loadUser();
   }
 
-  Future<void> _loadUserData() async {
-    User? user = await SharedPrefs.getLoggedInUser();
-    if (user != null) {
-      setState(() {
-        selectedGender = user.gender;
-        activityLevel = user.activityLevel;
-        ageController.text = user.age.toString();
-        heightController.text = user.height.toString();
-        weightController.text = user.weight.toString();
-        isLoading = false;
-      });
-    }
-  }
-
-  Future<void> _saveUserData() async {
-    User? currentUser = await SharedPrefs.getLoggedInUser();
-    if (currentUser != null) {
-      User updatedUser = User(
-        email: currentUser.email,
-        password: currentUser.password,
-        gender: selectedGender,
-        age: int.tryParse(ageController.text) ?? 20,
-        height: double.tryParse(heightController.text) ?? 170.0,
-        weight: double.tryParse(weightController.text) ?? 60.0,
-        activityLevel: activityLevel,
-      );
-      await SharedPrefs.saveUser(updatedUser);
-      _loadUserData();
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("사용자 정보가 업데이트되었습니다.")),
-      );
-    }
+  Future<void> _loadUser() async {
+    final user = await SharedPrefs.getLoggedInUser();
+    setState(() {
+      currentUser = user;
+      isLoading = false;
+    });
   }
 
   Future<void> _logout() async {
@@ -75,81 +40,179 @@ class _ProfilePageState extends State<ProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    if (isLoading) {
-      return Scaffold(
-        appBar: AppBar(title: Text("마이 페이지")),
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
-
     return Scaffold(
-      appBar: AppBar(title: Text("마이 페이지")),
-      body: Padding(
-        padding: EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      backgroundColor: AppTheme.backgroundColor,
+      body: SafeArea(
+        child: isLoading
+            ? Center(child: CircularProgressIndicator())
+            : SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Column(
+            children: [
+              const SizedBox(height: 24),
+              _buildTitle(),
+              const SizedBox(height: 24),
+              _buildProfileCard(),
+              const SizedBox(height: 24),
+              if (currentUser != null) _buildUserInfo(),
+              const SizedBox(height: 24),
+              _buildActionItem(Icons.edit, "정보 수정", onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => EditProfilePage(user: currentUser!)),
+                ).then((_) => _loadUser());
+              }),
+              _buildActionItem(Icons.lock_outline, "비밀번호 변경", onTap: () {
+                // ✅ 추후 비밀번호 변경 기능 연결 예정
+              }),
+              _buildActionItem(Icons.logout, "로그아웃", onTap: _logout),
+              const SizedBox(height: 40),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTitle() {
+    return Center(
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+        decoration: BoxDecoration(
+          color: AppTheme.primaryColor.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(30),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Text("사용자 정보 수정", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            SizedBox(height: 20),
-
-            CustomDropdown(
-              label: "성별",
-              value: selectedGender,
-              items: ["남성", "여성"],
-              onChanged: (value) => setState(() => selectedGender = value!),
-            ),
-            SizedBox(height: 10),
-
-            CustomInputField(
-              label: "나이",
-              controller: ageController,
-              keyboardType: TextInputType.number,
-            ),
-            SizedBox(height: 10),
-
-            CustomInputField(
-              label: "키 (cm)",
-              controller: heightController,
-              keyboardType: TextInputType.numberWithOptions(decimal: true),
-            ),
-            SizedBox(height: 10),
-
-            CustomInputField(
-              label: "몸무게 (kg)",
-              controller: weightController,
-              keyboardType: TextInputType.numberWithOptions(decimal: true),
-            ),
-            SizedBox(height: 10),
-
-            CustomLabeledDropdown(
-              label: "활동 수준",
-              value: activityLevel,
-              items: {
-                "낮음": "활동량: 낮음 (거의 운동 안 함)",
-                "보통": "활동량: 보통 (주 1~2회 가벼운 운동)",
-                "높음": "활동량: 높음 (주 3회 이상 운동)"
-              },
-              onChanged: (value) => setState(() => activityLevel = value!),
-            ),
-            SizedBox(height: 20),
-
-            Center(
-              child: ElevatedButton(
-                onPressed: _saveUserData,
-                child: Text("저장"),
-              ),
-            ),
-            SizedBox(height: 20),
-
-            Center(
-              child: ElevatedButton(
-                onPressed: _logout,
-                child: Text("로그아웃"),
+            Icon(Icons.person, color: AppTheme.primaryColor),
+            SizedBox(width: 8),
+            Text(
+              "마이페이지",
+              style: TextStyle(
+                color: AppTheme.primaryColor,
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
               ),
             ),
           ],
         ),
       ),
     );
+  }
+
+  Widget _buildProfileCard() {
+    return Container(
+      padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 6,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 32,
+            backgroundColor: AppTheme.primaryColor.withOpacity(0.2),
+            child: Icon(Icons.person, color: AppTheme.primaryColor, size: 32),
+          ),
+          SizedBox(width: 16),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                currentUser?.email ?? "이메일 정보 없음",
+                style: TextStyle(color: Colors.grey[600]),
+              ),
+            ],
+          )
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUserInfo() {
+    return Container(
+      padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.secondaryColor.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        children: [
+          _buildInfoRow("키", "${currentUser!.height.toStringAsFixed(1)} cm"),
+          _buildInfoRow("몸무게", "${currentUser!.weight.toStringAsFixed(1)} kg"),
+          _buildInfoRow("목표 섭취 칼로리", "${_calculateTargetCalories(currentUser!)} kcal"), // ✅ 목표 칼로리 추가
+          _buildInfoRow("성별", currentUser!.gender),
+          _buildInfoRow("나이", "${currentUser!.age}세"),
+          _buildInfoRow("활동량", currentUser!.activityLevel),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+          Text(value, style: TextStyle(fontSize: 16, color: Colors.black87)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionItem(IconData icon, String title, {required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black12,
+              blurRadius: 6,
+              offset: Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: AppTheme.primaryColor),
+            SizedBox(width: 12),
+            Text(
+              title,
+              style: TextStyle(fontSize: 16, color: Colors.black87),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  int _calculateTargetCalories(User user) {
+    double bmr;
+    if (user.gender == "남성") {
+      bmr = 10 * user.weight + 6.25 * user.height - 5 * user.age + 5;
+    } else {
+      bmr = 10 * user.weight + 6.25 * user.height - 5 * user.age - 161;
+    }
+
+    double activityFactor = 1.2;
+    if (user.activityLevel == "보통") activityFactor = 1.375;
+    if (user.activityLevel == "높음") activityFactor = 1.55;
+
+    return (bmr * activityFactor).round();
   }
 }
