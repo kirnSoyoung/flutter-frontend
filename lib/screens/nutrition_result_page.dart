@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import '../models/meal_model.dart';
 import '../utils/api_service.dart';
 import '../utils/data_manager.dart';
+import '../utils/nutrition_standards.dart';
 import '../widgets/nutrient_gauge.dart';
 import 'diet_recognition_page.dart';
 
@@ -29,22 +30,14 @@ class NutritionResultPage extends StatefulWidget {
 }
 
 class _NutritionResultPageState extends State<NutritionResultPage> {
-  bool _mealAdded = false;
   bool _isLoading = true;
+  bool _showAll = false;
+  bool _isSaved = false;
   Map<String, double> _nutrients = {};
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (!_mealAdded && !widget.isFromHistory) {
-      Provider.of<DataManager>(context, listen: false).addMeal(
-        widget.selectedDate ?? DateTime.now(),
-        File(widget.imagePath),
-        widget.nutrients,
-        widget.mealName,
-      );
-      _mealAdded = true;
-    }
+  void initState() {
+    super.initState();
     _loadNutrientData();
   }
 
@@ -55,46 +48,29 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
       _nutrients = updatedNutrients;
       _isLoading = false;
     });
+  }
 
+  void _saveMeal() {
+    if (_isSaved) return;
     final dataManager = Provider.of<DataManager>(context, listen: false);
-    final mealDate = widget.selectedDate ?? DateTime.now();
-    final meals = dataManager.getMealsForDate(mealDate);
+    final date = widget.selectedDate ?? DateTime.now();
 
-    if (meals != null) {
-      for (var meal in meals) {
-        if (meal.image.path == widget.imagePath) {
-          meals.remove(meal);
-          meals.add(Meal(
-            image: File(widget.imagePath),
-            nutrients: updatedNutrients,
-            mealName: widget.mealName,
-          ));
-          dataManager.saveMeals();
-          dataManager.notifyListeners();
-          break;
-        }
-      }
-    }
+    dataManager.addMeal(
+      date,
+      File(widget.imagePath),
+      _nutrients,
+      widget.mealName,
+    );
+    setState(() {
+      _isSaved = true;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('식단이 저장되었습니다.')),
+    );
   }
 
   void _goBack() {
     Navigator.pop(context);
-  }
-
-  void _editMeal() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => DietRecognitionPage(
-          image: File(widget.imagePath),
-          selectedDate: widget.selectedDate,
-          initialMealName: widget.mealName,
-          isEditing: true,
-        ),
-      ),
-    ).then((_) {
-      setState(() {});
-    });
   }
 
   void _deleteMeal() {
@@ -132,68 +108,136 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
     );
   }
 
+  Widget _buildBottomButtons() {
+    // 🔽 버튼 하단 고정 및 조건별 렌더링
+    if (widget.isFromHistory) {
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          ElevatedButton.icon(
+            onPressed: _deleteMeal,
+            icon: Icon(Icons.delete),
+            label: Text("삭제하기"),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              minimumSize: Size(160, 48),
+            ),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => DietRecognitionPage(
+                    image: File(widget.imagePath),
+                    selectedDate: widget.selectedDate,
+                    initialMealName: widget.mealName,
+                    isEditing: true,
+                  ),
+                ),
+              );
+            },
+            icon: Icon(Icons.refresh),
+            label: Text("다시 분석하기"),
+            style: ElevatedButton.styleFrom(
+              minimumSize: Size(160, 48),
+            ),
+          ),
+        ],
+      );
+    } else {
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        children: [
+          ElevatedButton.icon(
+            onPressed: _saveMeal,
+            icon: Icon(Icons.save),
+            label: Text("식단 저장하기"),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).primaryColor,
+              foregroundColor: Colors.white,
+              minimumSize: Size(160, 48),
+            ),
+          ),
+          ElevatedButton.icon(
+            onPressed: () {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => DietRecognitionPage(
+                    image: File(widget.imagePath),
+                    selectedDate: widget.selectedDate,
+                    initialMealName: widget.mealName,
+                    isEditing: true,
+                  ),
+                ),
+              );
+            },
+            icon: Icon(Icons.refresh),
+            label: Text("다시 분석하기"),
+            style: ElevatedButton.styleFrom(
+              minimumSize: Size(160, 48),
+            ),
+          ),
+        ],
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return PopScope(
-      canPop: false,
-      onPopInvokedWithResult: (didPop, result) {
-        if (!didPop) {
-          _goBack();
-        }
-      },
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text("영양소 분석 결과"),
-          leading: IconButton(
-            icon: Icon(Icons.arrow_back),
-            onPressed: _goBack,
-          ),
-          actions: [
-            if (widget.isFromHistory) ...[
-              IconButton(
-                icon: Icon(Icons.edit, color: Colors.blue),
-                onPressed: _editMeal,
-              ),
-              IconButton(
-                icon: Icon(Icons.delete, color: Colors.red),
-                onPressed: _deleteMeal,
-              ),
-            ],
-          ],
+    return Scaffold(
+      appBar: AppBar(
+        title: Text("영양소 분석 결과"),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back),
+          onPressed: _goBack,
         ),
-        body: Padding(
-          padding: EdgeInsets.all(16.0),
-          child: Column(
-            children: [
-              Image.file(
-                  File(widget.imagePath),
-                  width: double.infinity,
-                  height: 250,
-                  fit: BoxFit.cover
-              ),
-              SizedBox(height: 20),
-              Text(
-                "현재 등록된 식단: ${widget.mealName}",
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              SizedBox(height: 10),
-              _isLoading
-                  ? Center(child: CircularProgressIndicator())
-                  : Expanded(
-                    child: ListView(
-                      children: _nutrients.entries.map((entry) {
-                        return NutrientGauge(
-                          label: entry.key,
-                          currentValue: entry.value,
-                          mealsPerDay: 3,
-                          isDailyTotal: false,
-                        );
-                      }).toList(),
-                    ),
+      ),
+      body: _isLoading
+          ? Center(child: CircularProgressIndicator())
+          : Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Image.file(
+                    File(widget.imagePath),
+                    width: double.infinity,
+                    height: 250,
+                    fit: BoxFit.cover,
                   ),
-            ],
+                  const SizedBox(height: 20),
+                  Text(
+                    "현재 등록된 식단: ${widget.mealName}",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 20),
+                  Column(
+                    children: averageDailyRequirements.entries.map((entry) {
+                      final label = entry.key;
+                      final current = _nutrients[label] ?? 0.0;
+                      return NutrientGauge(
+                        label: label,
+                        currentValue: current,
+                        mealsPerDay: 3,
+                        isDailyTotal: false,
+                      );
+                    }).toList(),
+                  ),
+                ],
+              ),
+            ),
           ),
-        ),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: _buildBottomButtons(),
+          ),
+        ],
       ),
     );
   }

@@ -177,41 +177,41 @@ class _HomePageState extends State<HomePage> {
                           child: ListView.builder(
                             scrollDirection: Axis.horizontal,
                             itemCount: meals.length,
-                            itemBuilder: (context, index) {
-                              return GestureDetector(
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => NutritionResultPage(
-                                        imagePath: meals[index].image.path,
-                                        nutrients: meals[index].nutrients,
-                                        selectedDate: DateTime.now(),
-                                        mealName: meals[index].mealName,
-                                        isFromHistory: true,
+                              itemBuilder: (context, index) {
+                                final meal = meals[index];
+                                return GestureDetector(
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => NutritionResultPage(
+                                          imagePath: meal.image.path,
+                                          nutrients: meal.nutrients,
+                                          selectedDate: today,
+                                          mealName: meal.mealName,
+                                          isFromHistory: true,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  child: Container(
+                                    width: 120,
+                                    margin: EdgeInsets.only(right: 12),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(12),
+                                      image: DecorationImage(
+                                        image: FileImage(meal.image),
+                                        fit: BoxFit.cover,
                                       ),
                                     ),
-                                  );
-                                },
-                                child: Container(
-                                  width: 120,
-                                  margin: EdgeInsets.only(right: 12),
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(12),
-                                    image: DecorationImage(
-                                      image: FileImage(meals[index].image),
-                                      fit: BoxFit.cover,
-                                    ),
                                   ),
-                                ),
-                              );
-                            },
+                                );
+                              }
+
                           ),
                         ),
                         SizedBox(height: 32),
                       ],
-
-                      // 영양소 섭취 현황
                       Text(
                         "오늘의 영양소 섭취량",
                         style: TextStyle(
@@ -231,20 +231,16 @@ class _HomePageState extends State<HomePage> {
                           ),
                         ),
                         child: Column(
-                          children: () {
-                            var entries = dailyIntake.entries.toList();
-                            entries.sort((a, b) {
-                              double percentageA = (a.value / (averageDailyRequirements[a.key] ?? 100)) * 100;
-                              double percentageB = (b.value / (averageDailyRequirements[b.key] ?? 100)) * 100;
-                              return percentageB.compareTo(percentageA);
-                            });
-                            return entries.map((entry) => NutrientGauge(
-                              label: entry.key,
-                              currentValue: entry.value,
+                          children: averageDailyRequirements.entries.map((entry) {
+                            final label = entry.key;
+                            final current = dailyIntake[label] ?? 0.0;
+                            return NutrientGauge(
+                              label: label,
+                              currentValue: current,
                               mealsPerDay: mealsPerDay,
                               isDailyTotal: true,
-                            )).toList();
-                          }(),
+                            );
+                          }).toList(),
                         ),
                       ),
                     ],

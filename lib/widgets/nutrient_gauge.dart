@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
-
 import '../utils/nutrition_standards.dart';
-import '../utils/nutrient_utils.dart';
+import '../theme/app_theme.dart';
 
 class NutrientGauge extends StatelessWidget {
-  final String label; // 영양소 이름 (예: 탄수화물, 단백질)
+  final String label;
   final double currentValue;
   final int mealsPerDay;
-  final bool isDailyTotal; // 하루 총 섭취량인지 여부
+  final bool isDailyTotal;
 
   NutrientGauge({
     required this.label,
@@ -18,45 +17,140 @@ class NutrientGauge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    double dailyRequirement = averageDailyRequirements[label] ?? 100;
+    final double maxValue = averageDailyRequirements[label] ?? 100;
+    final double percentage = ((currentValue / maxValue) * 100);
 
-    // 섭취량 퍼센트 계산 (하루 누적 또는 한 끼 기준)
-    double percentage = isDailyTotal
-        ? (currentValue / dailyRequirement * 100).clamp(0.0, 150) // 하루 기준
-        : (currentValue / (dailyRequirement / mealsPerDay) * 100).clamp(0.0, 150); // 한 끼 기준
+    // 섭취량 상태 결정
+    NutrientStatus status = _getNutrientStatus(percentage);
 
-    double gaugeWidth = (percentage / 100).clamp(0.0, 1.5) * MediaQuery.of(context).size.width;
-    String unit = getNutrientUnit(label);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          "$label: ${currentValue.toStringAsFixed(1)} (${percentage.toStringAsFixed(1)}%)",
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
-        Stack(
-          children: [
-            Container(
-              width: double.infinity,
-              height: 20,
-              decoration: BoxDecoration(
-                color: Colors.grey[300],
-                borderRadius: BorderRadius.circular(5),
-              ),
+    return Container(
+      margin: EdgeInsets.only(bottom: 16),
+      padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: status.color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          // 영양소 아이콘
+          Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 10,
+                  offset: Offset(0, 2),
+                ),
+              ],
             ),
-            Container(
-              width: gaugeWidth,
-              height: 20,
-              decoration: BoxDecoration(
-                color: percentage > 100 ? Colors.red : Colors.green, // 초과 섭취 시 빨강
-                borderRadius: BorderRadius.circular(5),
-              ),
+            child: Icon(
+              _getNutrientIcon(label),
+              color: status.color,
+              size: 24,
             ),
-          ],
-        ),
-        SizedBox(height: 8),
-      ],
+          ),
+          SizedBox(width: 16),
+          // 영양소 정보
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      label,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      "${currentValue.toStringAsFixed(1)} ${nutrientUnits[label] ?? ''}",
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                        color: status.color,
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 8),
+                Text(
+                  status.message,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: status.color,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
+
+  String _normalizeNutrient(String nutrient) {
+    return nutrient.split('(').first.trim();
+  }
+
+  IconData _getNutrientIcon(String nutrient) {
+    final normalized = _normalizeNutrient(nutrient).toLowerCase();
+
+    switch (normalized) {
+      case "단백질":
+        return Icons.egg_alt;
+      case "탄수화물":
+        return Icons.breakfast_dining;
+      case "지방":
+        return Icons.oil_barrel;
+      case "비타민":
+        return Icons.local_florist;
+      case "칼슘":
+        return Icons.fitness_center;
+      case "에너지":
+        return Icons.local_fire_department;
+      default:
+        return Icons.scatter_plot;
+    }
+  }
+
+  NutrientStatus _getNutrientStatus(double percentage) {
+    if (percentage < 30) {
+      return NutrientStatus(
+        color: Colors.orange,
+        message: "섭취량이 부족해요",
+      );
+    } else if (percentage < 80) {
+      return NutrientStatus(
+        color: AppTheme.primaryColor,
+        message: "적절히 섭취하고 있어요",
+      );
+    } else if (percentage <= 110) {
+      return NutrientStatus(
+        color: Colors.green,
+        message: "권장량에 가깝게 섭취했어요",
+      );
+    } else {
+      return NutrientStatus(
+        color: Colors.red,
+        message: "과다 섭취했어요",
+      );
+    }
+  }
+}
+
+class NutrientStatus {
+  final Color color;
+  final String message;
+
+  NutrientStatus({
+    required this.color,
+    required this.message,
+  });
 }
