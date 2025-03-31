@@ -1,5 +1,5 @@
 const Map<String, double> averageDailyRequirements = {
-  '에너지': 2000.0,
+  '칼로리': 2000.0,
   '탄수화물': 300.0,
   '총 식이섬유': 25.0,
   '단백질': 50.0,
@@ -33,7 +33,7 @@ const Map<String, double> averageDailyRequirements = {
 
 
 const Map<String, String> nutrientUnits = {
-  '에너지': '㎉',
+  '칼로리': '㎉',
   '탄수화물': 'g',
   '총 식이섬유': 'g',
   '단백질': 'g',

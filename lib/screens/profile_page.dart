@@ -1,10 +1,9 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../models/user_model.dart';
 import '../utils/shared_prefs.dart';
 import 'login_page.dart';
-import 'edit_profile_page.dart'; // ✅ 정보 수정 페이지 추가
+import 'edit_profile_page.dart';
 
 class ProfilePage extends StatefulWidget {
   @override
@@ -63,7 +62,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 ).then((_) => _loadUser());
               }),
               _buildActionItem(Icons.lock_outline, "비밀번호 변경", onTap: () {
-                // ✅ 추후 비밀번호 변경 기능 연결 예정
+                // 추후 비밀번호 변경 기능 연결 예정 ✨
               }),
               _buildActionItem(Icons.logout, "로그아웃", onTap: _logout),
               const SizedBox(height: 40),

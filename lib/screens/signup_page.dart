@@ -465,9 +465,6 @@ class _SignupPageState extends State<SignupPage> {
       }
 
       await SharedPrefs.saveUser(newUser);
-
-      print("✅ 회원가입 성공 → 로그인 페이지로 이동");
-
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(
           builder: (context) => LoginPage(),

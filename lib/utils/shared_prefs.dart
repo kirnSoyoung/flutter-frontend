@@ -21,8 +21,6 @@ class SharedPrefs {
   }
 
   static Future<void> saveUser(User user) async {
-    print("👀 saveUser() 호출됨");
-
     SharedPreferences prefs = await SharedPreferences.getInstance();
     String? usersJson = prefs.getString("users");
 
@@ -36,8 +34,6 @@ class SharedPrefs {
     users.add(user);
 
     await prefs.setString("users", jsonEncode(users.map((u) => u.toJson()).toList()));
-
-    print("✅ saveUser() 완료");
   }
 
   /// 자동 로그인 정보 저장

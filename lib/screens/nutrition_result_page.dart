@@ -7,6 +7,8 @@ import '../models/meal_model.dart';
 import '../utils/api_service.dart';
 import '../utils/data_manager.dart';
 import '../utils/nutrition_standards.dart';
+import '../utils/food_nutrient_cache.dart';
+import '../utils/test_nutrients.dart';
 import '../widgets/nutrient_gauge.dart';
 import 'diet_recognition_page.dart';
 
@@ -41,12 +43,26 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
   }
 
   Future<void> _loadNutrientData() async {
-    final data = await ApiService.fetchNutrientsByName(widget.mealName);
-    final updatedNutrients = data ?? widget.nutrients;
-    setState(() {
-      _nutrients = updatedNutrients;
-      _isLoading = false;
-    });
+    final cached = FoodNutrientCache.get(widget.mealName);
+    if (cached != null) {
+      _nutrients = cached;
+    } else {
+      // ✅ 지금은 테스트용 데이터 사용
+      final test = testNutrients; // ← 테스트 데이터
+      _nutrients = test;
+
+      // 나중에 서버 연동되면 이 부분 활성화
+      /*
+      final data = await ApiService.fetchNutrientsByName(widget.mealName);
+      if (data != null) {
+        _nutrients = data;
+        FoodNutrientCache.save(widget.mealName, data);
+      }
+      */
+    FoodNutrientCache.save(widget.mealName, test);
+  }
+
+  setState(() => _isLoading = false);
   }
 
   void _saveMeal() {
