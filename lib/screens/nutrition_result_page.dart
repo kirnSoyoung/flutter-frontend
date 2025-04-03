@@ -48,18 +48,19 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
       _nutrients = cached;
     } else {
       // ✅ 지금은 테스트용 데이터 사용
-      final test = testNutrients; // ← 테스트 데이터
-      _nutrients = test;
+      // test = testNutrients; // ← 테스트 데이터
+      //_nutrients = test;
 
       // 나중에 서버 연동되면 이 부분 활성화
-      /*
+
       final data = await ApiService.fetchNutrientsByName(widget.mealName);
       if (data != null) {
         _nutrients = data;
         FoodNutrientCache.save(widget.mealName, data);
       }
-      */
-    FoodNutrientCache.save(widget.mealName, test);
+
+    //FoodNutrientCache.save(widget.mealName, test);
+
   }
 
   setState(() => _isLoading = false);

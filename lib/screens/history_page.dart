@@ -37,12 +37,14 @@ class _HistoryPageState extends State<HistoryPage> {
   void _nextWeek() {
     setState(() {
       _currentWeekStart = _currentWeekStart.add(Duration(days: 7));
+      _selectedDate = _currentWeekStart;
     });
   }
 
   void _previousWeek() {
     setState(() {
       _currentWeekStart = _currentWeekStart.subtract(Duration(days: 7));
+      _selectedDate = _currentWeekStart;
     });
   }
 
@@ -108,40 +110,61 @@ class _HistoryPageState extends State<HistoryPage> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    IconButton(icon: Icon(Icons.arrow_back), onPressed: _previousWeek),
+                    IconButton(
+                        icon: Icon(Icons.arrow_back), onPressed: _previousWeek),
                     Text(
-                      DateFormat.yMMMM('ko_KR').format(_currentWeekStart),
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      DateFormat.yMMMM('ko_KR').format(_selectedDate!),
+                      style:
+                      TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
-                    IconButton(icon: Icon(Icons.arrow_forward), onPressed: _nextWeek),
+                    IconButton(
+                        icon: Icon(Icons.arrow_forward), onPressed: _nextWeek),
                   ],
                 ),
                 SizedBox(height: 10),
-
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: ["일", "월", "화", "수", "목", "금", "토"]
-                      .map((day) => Text(day, style: TextStyle(fontWeight: FontWeight.bold)))
-                      .toList(),
-                ),
-                SizedBox(height: 5),
-
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: weekDays.map((date) {
-                    bool hasMeal = (dataManager.getMealsForDate(date)?.isNotEmpty ?? false);
+                    final isSelected = _selectedDate?.day == date.day && _selectedDate?.month == date.month;
+                    final hasMeal = (dataManager.getMealsForDate(date)?.isNotEmpty ?? false);
+                    final weekdayLabel = DateFormat.E('ko_KR').format(date);
+                    final isSameMonth = date.month == _selectedDate?.month;
 
                     return GestureDetector(
                       onTap: () => _selectDate(date),
                       child: Column(
                         children: [
                           Text(
-                            DateFormat.d().format(date),
+                            weekdayLabel,
                             style: TextStyle(
-                              fontSize: 16,
-                              color: _selectedDate?.day == date.day ? Colors.blue : Colors.black,
+                              fontWeight: FontWeight.bold,
+                              color: isSameMonth ? Colors.black : Colors.grey,
                             ),
                           ),
+                          SizedBox(height: 4),
+                          Container(
+                            width: 36,
+                            height: 36,
+                            alignment: Alignment.center,
+                            decoration: BoxDecoration(
+                              color: isSelected ? Colors.green : Colors.transparent,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Text(
+                              '${date.day}',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight:
+                                isSelected ? FontWeight.bold : FontWeight.normal,
+                                color: isSelected
+                                    ? Colors.white
+                                    : isSameMonth
+                                    ? Colors.black
+                                    : Colors.grey,
+                              ),
+                            ),
+                          ),
+                          SizedBox(height: 4),
                           Container(
                             width: 6,
                             height: 6,
@@ -149,7 +172,7 @@ class _HistoryPageState extends State<HistoryPage> {
                               shape: BoxShape.circle,
                               color: hasMeal ? Colors.green : Colors.transparent,
                             ),
-                          ),
+                          )
                         ],
                       ),
                     );
@@ -165,7 +188,6 @@ class _HistoryPageState extends State<HistoryPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   const SizedBox(height: 16),
-
                   SizedBox(
                     height: 100,
                     child: meals.isNotEmpty
@@ -201,13 +223,13 @@ class _HistoryPageState extends State<HistoryPage> {
                     )
                         : Center(child: Text("등록된 식단이 없습니다.")),
                   ),
-
                   const SizedBox(height: 20),
-
                   if (meals.isNotEmpty) ...[
                     Text(
-                      DateFormat('MM월 dd일의 영양소 섭취량', 'ko_KR').format(_selectedDate!),
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      DateFormat('MM월 dd일의 영양소 섭취량', 'ko_KR')
+                          .format(_selectedDate!),
+                      style:
+                      TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 10),
                     Container(
@@ -217,7 +239,8 @@ class _HistoryPageState extends State<HistoryPage> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Column(
-                        children: averageDailyRequirements.entries.map((entry) {
+                        children:
+                        averageDailyRequirements.entries.map((entry) {
                           final label = entry.key;
                           final current = dailyIntake[label] ?? 0.0;
                           return NutrientGauge(
