@@ -1,10 +1,9 @@
-// 📄 meal_model.dart (식단 단위로 리팩터링)
 import 'dart:io';
 
 class Meal {
   final File image;
   final Map<String, double> nutrients;
-  final List<String> mealNames; // ✅ 여러 음식으로 변경
+  final List<String> mealNames;
 
   Meal({
     required this.image,
