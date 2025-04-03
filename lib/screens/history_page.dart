@@ -89,8 +89,6 @@ class _HistoryPageState extends State<HistoryPage> {
                 builder: (context) => DietRecognitionPage(
                   image: File(pickedFile.path),
                   selectedDate: _selectedDate,
-                  initialMealName: "",
-                  isEditing: false,
                 ),
               ),
             );

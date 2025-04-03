@@ -1,4 +1,5 @@
 import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
@@ -7,6 +8,7 @@ import '../models/meal_model.dart';
 import '../utils/data_manager.dart';
 import '../utils/file_manager.dart';
 import '../utils/food_list.dart';
+import '../utils/api_service.dart';
 import 'nutrition_result_page.dart';
 
 class RecognizedFood {
@@ -18,25 +20,20 @@ class RecognizedFood {
 class DietRecognitionPage extends StatefulWidget {
   final File image;
   final DateTime? selectedDate;
-  final String? initialMealName;
-  final bool isEditing;
 
-  DietRecognitionPage({
+  const DietRecognitionPage({
     required this.image,
     this.selectedDate,
-    this.initialMealName,
-    this.isEditing = false,
   });
 
   @override
-  _DietRecognitionPageState createState() => _DietRecognitionPageState();
+  State<DietRecognitionPage> createState() => _DietRecognitionPageState();
 }
 
 class _DietRecognitionPageState extends State<DietRecognitionPage> {
   List<RecognizedFood> recognizedFoods = [];
+  List<String> selectedFoods = [];
   List<String> mealOptions = [];
-  String selectedMeal = '';
-  Map<String, double> nutrients = {};
   TextEditingController searchController = TextEditingController();
   String? selectedImagePath;
   bool isUploading = true;
@@ -60,28 +57,21 @@ class _DietRecognitionPageState extends State<DietRecognitionPage> {
 
   Future<void> _uploadAndAnalyzeImage(File image) async {
     try {
-      var response = await FileManager.uploadImageToServer(image);
+      final response = await FileManager.uploadImageToServer(image);
       if (response != null && response['message'] == "Complete") {
-        List<dynamic> foodList = response['yolo_result'];
+        List<dynamic> yoloList = response['yolo_result'];
 
-        recognizedFoods = foodList.map((item) => RecognizedFood(
+        recognizedFoods = yoloList.map((item) => RecognizedFood(
           item['label_kor'],
           (item['confidence'] as num).toDouble(),
         )).toList();
 
-        if (recognizedFoods.isNotEmpty) {
-          final top = recognizedFoods.first;
-          selectedMeal = top.label;
-          searchController.text = top.label;
-        }
+        selectedFoods = recognizedFoods.map((f) => f.label).toList();
       }
     } catch (e) {
-      print("❌ 업로드 또는 인식 실패: $e");
+      print("❌ 인식 실패: $e");
     }
-
-    setState(() {
-      isUploading = false;
-    });
+    setState(() => isUploading = false);
   }
 
   Future<void> _loadFoodList() async {
@@ -89,79 +79,40 @@ class _DietRecognitionPageState extends State<DietRecognitionPage> {
     setState(() {});
   }
 
-  void _onSearchChanged(String value) {
-    setState(() {});
-  }
-
-  void _onMealSelected(String label) {
-    setState(() {
-      selectedMeal = label;
-      searchController.text = label;
-    });
-  }
-
-  void _clearSearch() {
-    setState(() {
-      searchController.clear();
-      selectedMeal = '';
-    });
-  }
-
-  bool _shouldShowSuggestions() {
-    final query = searchController.text.trim();
-    if (query.isNotEmpty) return true;
-    return selectedMeal.isEmpty;
-  }
-
-  List<Widget> _buildSuggestions() {
-    final query = searchController.text.trim();
-
-    if (query.isEmpty) {
-      return recognizedFoods.map((f) {
-        return ListTile(
-          title: Text("${f.label} (${(f.confidence * 100).toStringAsFixed(0)}%)"),
-          onTap: () => _onMealSelected(f.label),
-        );
-      }).toList();
+  void _addFoodFromSearch(String input) {
+    if (input.trim().isEmpty) return;
+    final value = input.trim();
+    if (!selectedFoods.contains(value) && mealOptions.contains(value)) {
+      setState(() {
+        selectedFoods.add(value);
+        searchController.clear();
+      });
     }
-
-    final recognizedMatches = recognizedFoods
-        .where((f) =>
-          f.label.contains(query) &&
-          f.label != selectedMeal)
-        .map((f) => ListTile(
-          title: Text("${f.label} (${(f.confidence * 100).toStringAsFixed(0)}%)"),
-          onTap: () => _onMealSelected(f.label),
-          )
-        );
-
-    final listMatches = mealOptions
-        .where((m) => m.contains(query) && recognizedFoods.every((f) => f.label != m))
-        .map((m) => ListTile(
-      title: Text(m),
-      onTap: () => _onMealSelected(m),
-    ));
-
-    return [...recognizedMatches, ...listMatches];
   }
 
-  void proceedToAnalysis() {
-    final dataManager = Provider.of<DataManager>(context, listen: false);
-    final DateTime mealDate = widget.selectedDate ?? DateTime.now();
+  Future<Map<String, double>> fetchCombinedNutrients() async {
+    Map<String, double> combined = {};
 
-    if (selectedImagePath == null) return;
-
-    if (widget.isEditing) {
-      List<Meal>? meals = dataManager.getMealsForDate(mealDate);
-      if (meals != null) {
-        meals.removeWhere((meal) => File(meal.image.path).absolute.path == File(widget.image.path).absolute.path);
-        if (meals.isEmpty) {
-          dataManager.allMeals.remove(mealDate);
-        }
-        dataManager.saveMeals();
-        dataManager.notifyListeners();
+    for (String food in selectedFoods) {
+      final nutrients = await ApiService.fetchNutrientsByName(food);
+      if (nutrients != null) {
+        nutrients.forEach((k, v) {
+          combined[k] = (combined[k] ?? 0) + v;
+        });
       }
     }
+
+    return combined;
+  }
+
+  void proceedToAnalysis() async {
+    final dataManager = Provider.of<DataManager>(context, listen: false);
+    final DateTime mealDate = widget.selectedDate ?? DateTime.now();
+    if (selectedImagePath == null || selectedFoods.isEmpty) return;
+
+    final nutrients = await fetchCombinedNutrients();
+
+    dataManager.addMeal(mealDate, File(selectedImagePath!), nutrients, selectedFoods.join(", "));
 
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(
@@ -169,7 +120,7 @@ class _DietRecognitionPageState extends State<DietRecognitionPage> {
           imagePath: selectedImagePath!,
           nutrients: nutrients,
           selectedDate: mealDate,
-          mealName: selectedMeal,
+          mealName: selectedFoods.join(", "),
           isFromHistory: false,
         ),
       ),
@@ -179,76 +130,54 @@ class _DietRecognitionPageState extends State<DietRecognitionPage> {
 
   @override
   Widget build(BuildContext context) {
-    final suggestions = _buildSuggestions();
+    return Scaffold(
+      appBar: AppBar(title: Text("식단 인식")),
+      body: isUploading
+          ? Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Image.file(widget.image, width: double.infinity, height: 250, fit: BoxFit.cover),
+            SizedBox(height: 16),
 
-    return GestureDetector(
-      onTap: () {
-        FocusScope.of(context).unfocus();
-        setState(() {}); // 드롭다운 닫기 위함
-      },
-      child: Scaffold(
-        appBar: AppBar(title: Text("식단 인식")),
-        body: isUploading
-            ? Center(child: CircularProgressIndicator())
-            : SingleChildScrollView(
-          padding: EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Image.file(widget.image, width: double.infinity, height: 250, fit: BoxFit.cover),
-              SizedBox(height: 16),
-
-              Text("자동 인식된 식단:", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              SizedBox(height: 10),
-
-              TextField(
-                controller: searchController,
-                decoration: InputDecoration(
-                  hintText: "음식 검색",
-                  border: OutlineInputBorder(),
-                  suffixIcon: searchController.text.isNotEmpty
-                      ? IconButton(
-                    icon: Icon(Icons.clear),
-                    onPressed: _clearSearch,
-                  )
-                      : null,
-                ),
-                onChanged: (val) {
-                  _onSearchChanged(val);
-                  setState(() {});
-                },
+            TextField(
+              controller: searchController,
+              decoration: InputDecoration(
+                hintText: "음식 이름을 검색하세요",
+                suffixIcon: searchController.text.isNotEmpty
+                    ? IconButton(
+                  icon: Icon(Icons.clear),
+                  onPressed: () => setState(() => searchController.clear()),
+                )
+                    : null,
+                border: OutlineInputBorder(),
               ),
+              onSubmitted: _addFoodFromSearch,
+            ),
 
-              if (_shouldShowSuggestions() && suggestions.isNotEmpty)
-                Container(
-                  constraints: BoxConstraints(
-                    maxHeight: (_buildSuggestions().length * 48.0).clamp(60.0, 200.0),
-                  ),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey),
-                    borderRadius: BorderRadius.circular(8),
-                    color: Colors.white,
-                  ),
-                  child: ListView(
-                    shrinkWrap: true,
-                    children: suggestions,
-                  ),
-                ),
+            SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              children: selectedFoods.map((label) => Chip(
+                label: Text(label),
+                deleteIcon: Icon(Icons.close),
+                onDeleted: () => setState(() => selectedFoods.remove(label)),
+              )).toList(),
+            ),
 
-              SizedBox(height: 20),
-
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: selectedMeal.isNotEmpty ? proceedToAnalysis : null,
-                  child: Text("영양소 분석 진행"),
-                ),
+            SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: selectedFoods.isNotEmpty ? proceedToAnalysis : null,
+                child: Text("영양소 분석 진행"),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
-
 }

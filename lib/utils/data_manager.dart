@@ -17,7 +17,12 @@ class DataManager extends ChangeNotifier {
     DateTime normalizedDate = DateTime(date.year, date.month, date.day);
     _mealRecords[normalizedDate] ??= [];
     _mealRecords[normalizedDate]!.add(
-        Meal(image: image, nutrients: nutrients, mealName: mealName)
+      Meal(
+        image: image,
+        nutrients: nutrients,
+        mealName: mealName,
+        timestamp: timestamp,
+      ),
     );
     saveMeals();
     notifyListeners();

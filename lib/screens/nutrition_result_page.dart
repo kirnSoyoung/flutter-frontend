@@ -1,3 +1,4 @@
+// 📄 nutrition_result_page.dart (수정됨)
 import 'dart:io';
 
 import 'package:flutter/material.dart';
@@ -17,7 +18,7 @@ class NutritionResultPage extends StatefulWidget {
   final Map<String, double> nutrients;
   final bool isFromHistory;
   final DateTime? selectedDate;
-  final String mealName;
+  final String mealName; // 콤마로 구분된 음식들 문자열
 
   NutritionResultPage({
     required this.imagePath,
@@ -35,35 +36,18 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
   bool _isLoading = true;
   bool _isSaved = false;
   Map<String, double> _nutrients = {};
+  List<String> _mealNames = [];
 
   @override
   void initState() {
     super.initState();
+    _mealNames = widget.mealName.split(',').map((s) => s.trim()).toList();
     _loadNutrientData();
   }
 
   Future<void> _loadNutrientData() async {
-    final cached = FoodNutrientCache.get(widget.mealName);
-    if (cached != null) {
-      _nutrients = cached;
-    } else {
-      // ✅ 지금은 테스트용 데이터 사용
-      // test = testNutrients; // ← 테스트 데이터
-      //_nutrients = test;
-
-      // 나중에 서버 연동되면 이 부분 활성화
-
-      final data = await ApiService.fetchNutrientsByName(widget.mealName);
-      if (data != null) {
-        _nutrients = data;
-        FoodNutrientCache.save(widget.mealName, data);
-      }
-
-    //FoodNutrientCache.save(widget.mealName, test);
-
-  }
-
-  setState(() => _isLoading = false);
+    _nutrients = widget.nutrients;
+    setState(() => _isLoading = false);
   }
 
   void _saveMeal() {
@@ -125,7 +109,6 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
   }
 
   Widget _buildBottomButtons() {
-    // 🔽 버튼 UI 스타일 수정 (이미지 참고 기반)
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -157,8 +140,6 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
                   builder: (context) => DietRecognitionPage(
                     image: File(widget.imagePath),
                     selectedDate: widget.selectedDate,
-                    initialMealName: widget.mealName,
-                    isEditing: true,
                   ),
                 ),
               );
@@ -204,9 +185,14 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
                     fit: BoxFit.cover,
                   ),
                   const SizedBox(height: 20),
-                  Text(
-                    "현재 등록된 식단: ${widget.mealName}",
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  Text("선택된 음식들:", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8,
+                    children: _mealNames.map((name) => Chip(
+                      label: Text(name),
+                      backgroundColor: Colors.green[100],
+                    )).toList(),
                   ),
                   const SizedBox(height: 20),
                   Column(
