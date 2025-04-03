@@ -208,22 +208,21 @@ class _SupplementPageState extends State<SupplementPage> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Container(
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                 decoration: BoxDecoration(
-                  color: AppTheme.primaryColor.withOpacity(0.2),
+                  color: AppTheme.primaryColor.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(30),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.medical_services, color: AppTheme.primaryColor, size: 20),
-                    SizedBox(width: 6),
+                    Icon(Icons.medical_services, color: AppTheme.primaryColor),
+                    SizedBox(width: 8),
                     Text(
                       "영양제 추천",
                       style: TextStyle(
                         color: AppTheme.primaryColor,
-                        fontSize: 18,
+                        fontSize: 20,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
