@@ -40,9 +40,37 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
   }
 
   Future<void> _loadNutrientData() async {
-    _nutrients = widget.nutrients;
+    /*
+    print("📋 서버에서 받은 nutrient 키들:");
+    widget.nutrients.keys.forEach(print);
+
+    print("🎯 우리가 사용하는 키 목록:");
+    averageDailyRequirements.keys.forEach(print);
+    */
+    String normalizeKey(String raw) {
+      return raw.replaceAll(RegExp(r'\s*\(.*?\)'), '').trim();
+    }
+
+    final filtered = <String, double>{};
+
+    widget.nutrients.forEach((rawKey, value) {
+      final normalized = normalizeKey(rawKey);
+      if (averageDailyRequirements.containsKey(normalized)) {
+        filtered[normalized] = value;
+      } else {
+        print("❌ 매칭 실패: '$normalized'");
+      }
+    });
+
+    print("✅ 필터링 후 최종 nutrients:");
+    print(filtered);
+
+    _nutrients = filtered;
     setState(() => _isLoading = false);
   }
+
+
+
 
   void _saveMeal() {
     if (_isSaved) return;

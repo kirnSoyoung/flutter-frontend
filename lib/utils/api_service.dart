@@ -10,12 +10,24 @@ class ApiService {
   static Future<Map<String, double>?> fetchNutrientsByName(String foodName) async {
     try {
       final response = await http.get(
-        Uri.parse("$baseUrl/database/nutrients:${Uri.encodeComponent(foodName)}"),
+        Uri.parse("$baseUrl/database/food_data:${Uri.encodeComponent(foodName)}"),
       );
 
       if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        return Map<String, double>.from(data);  // 서버 응답이 바로 영양소 Map이면 이대로!
+        final decodedBody = utf8.decode(response.bodyBytes);
+        final data = jsonDecode(decodedBody);
+
+        print("🔥 서버 응답 데이터: $data");
+
+        final result = <String, double>{};
+        data.forEach((key, value) {
+          if (value is num) {
+            result[key] = value.toDouble();
+          }
+        });
+
+        print("🔥 UTF8 디코딩 후 결과: $result");
+        return result;
       }
     } catch (e) {
       print("❌ fetchNutrientsByName 예외 발생: $e");
@@ -24,6 +36,7 @@ class ApiService {
     print("⚠️ API 실패 또는 데이터 없음. 임시 testNutrients 사용");
     return testNutrients;
   }
+
 
 
   static Future<List<Map<String, String>>> fetchSupplements(String nutrient) async {
