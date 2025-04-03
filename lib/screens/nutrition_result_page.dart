@@ -1,15 +1,11 @@
-// 📄 nutrition_result_page.dart (수정됨)
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../models/meal_model.dart';
-import '../utils/api_service.dart';
 import '../utils/data_manager.dart';
 import '../utils/nutrition_standards.dart';
-import '../utils/food_nutrient_cache.dart';
-import '../utils/test_nutrients.dart';
 import '../widgets/nutrient_gauge.dart';
 import 'diet_recognition_page.dart';
 
@@ -18,12 +14,12 @@ class NutritionResultPage extends StatefulWidget {
   final Map<String, double> nutrients;
   final bool isFromHistory;
   final DateTime? selectedDate;
-  final String mealName; // 콤마로 구분된 음식들 문자열
+  final List<String> mealNames; // ✅ 리스트로 변경
 
-  NutritionResultPage({
+  const NutritionResultPage({
     required this.imagePath,
     required this.nutrients,
-    required this.mealName,
+    required this.mealNames,
     this.isFromHistory = false,
     this.selectedDate,
   });
@@ -36,12 +32,10 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
   bool _isLoading = true;
   bool _isSaved = false;
   Map<String, double> _nutrients = {};
-  List<String> _mealNames = [];
 
   @override
   void initState() {
     super.initState();
-    _mealNames = widget.mealName.split(',').map((s) => s.trim()).toList();
     _loadNutrientData();
   }
 
@@ -59,19 +53,15 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
       date,
       File(widget.imagePath),
       _nutrients,
-      widget.mealName,
+      widget.mealNames,
     );
-    setState(() {
-      _isSaved = true;
-    });
+    setState(() => _isSaved = true);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('식단이 저장되었습니다.')),
     );
   }
 
-  void _goBack() {
-    Navigator.pop(context);
-  }
+  void _goBack() => Navigator.pop(context);
 
   void _deleteMeal() {
     final dataManager = Provider.of<DataManager>(context, listen: false);
@@ -89,15 +79,7 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
           ),
           TextButton(
             onPressed: () {
-              List<Meal>? meals = dataManager.getMealsForDate(mealDate);
-              if (meals != null) {
-                meals.removeWhere((meal) => meal.image.path == widget.imagePath);
-                if (meals.isEmpty) {
-                  dataManager.allMeals.remove(mealDate);
-                }
-                dataManager.saveMeals();
-                dataManager.notifyListeners();
-              }
+              dataManager.deleteMealByImagePath(mealDate, widget.imagePath);
               Navigator.pop(context);
               _goBack();
             },
@@ -112,13 +94,13 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Container(
+        SizedBox(
           width: double.infinity,
           height: 50,
           child: ElevatedButton(
             onPressed: widget.isFromHistory ? _deleteMeal : _saveMeal,
             style: ElevatedButton.styleFrom(
-              backgroundColor: widget.isFromHistory ? Colors.red : Color(0xFF4CAF50),
+              backgroundColor: widget.isFromHistory ? Colors.red : Colors.green,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8.0),
@@ -130,7 +112,7 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
             ),
           ),
         ),
-        SizedBox(height: 12),
+        const SizedBox(height: 12),
         Center(
           child: GestureDetector(
             onTap: () {
@@ -189,7 +171,7 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
-                    children: _mealNames.map((name) => Chip(
+                    children: widget.mealNames.map((name) => Chip(
                       label: Text(name),
                       backgroundColor: Colors.green[100],
                     )).toList(),

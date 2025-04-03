@@ -1,34 +1,35 @@
-import 'dart:convert';
 import 'dart:io';
-
-import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-
+import 'package:flutter/foundation.dart';
 import '../models/meal_model.dart';
+import 'shared_prefs.dart';
 
 class DataManager extends ChangeNotifier {
-  static final DataManager _instance = DataManager._internal();
-  factory DataManager() => _instance;
-  DataManager._internal();
-
   final Map<DateTime, List<Meal>> _mealRecords = {};
 
-  void addMeal(DateTime date, File image, Map<String, double> nutrients, String mealName) {
+  Map<DateTime, List<Meal>> get allMeals => _mealRecords;
+
+  List<Meal>? getMealsForDate(DateTime date) {
+    DateTime normalizedDate = DateTime(date.year, date.month, date.day);
+    return _mealRecords[normalizedDate];
+  }
+
+  void addMeal(DateTime date, File image, Map<String, double> nutrients, List<String> mealNames) {
     DateTime normalizedDate = DateTime(date.year, date.month, date.day);
     _mealRecords[normalizedDate] ??= [];
+
     _mealRecords[normalizedDate]!.add(
       Meal(
         image: image,
         nutrients: nutrients,
-        mealName: mealName,
-        timestamp: timestamp,
+        mealNames: mealNames,
       ),
     );
+
     saveMeals();
     notifyListeners();
   }
 
-  void deleteMeal(DateTime date, String imagePath) {
+  void deleteMealByImagePath(DateTime date, String imagePath) {
     DateTime normalizedDate = DateTime(date.year, date.month, date.day);
     if (_mealRecords.containsKey(normalizedDate)) {
       _mealRecords[normalizedDate]!.removeWhere((meal) => meal.image.path == imagePath);
@@ -40,35 +41,14 @@ class DataManager extends ChangeNotifier {
     }
   }
 
-  List<Meal>? getMealsForDate(DateTime date) {
-    DateTime normalizedDate = DateTime(date.year, date.month, date.day);
-    return _mealRecords[normalizedDate];
-  }
-
-  Map<DateTime, List<Meal>> get allMeals => _mealRecords;
-
-  Future<void> saveMeals() async {
-    final prefs = await SharedPreferences.getInstance();
-    final jsonMeals = {
-      for (var entry in _mealRecords.entries)
-        entry.key.toIso8601String(): entry.value.map((m) => m.toJson()).toList(),
-    };
-    await prefs.setString('mealRecords', jsonEncode(jsonMeals));
+  void saveMeals() {
+    SharedPrefs.saveMeals(_mealRecords);
   }
 
   Future<void> loadMeals() async {
-    final prefs = await SharedPreferences.getInstance();
-    String? savedMeals = prefs.getString('mealRecords');
-    if (savedMeals == null) return;
-
-    Map<String, dynamic> jsonMeals = jsonDecode(savedMeals);
-    jsonMeals.forEach((date, meals) {
-      DateTime parsedDate = DateTime.parse(date);
-      _mealRecords[parsedDate] = (meals as List)
-          .map((meal) => Meal.fromJson(meal))
-          .toList();
-    });
-
+    Map<DateTime, List<Meal>> loaded = await SharedPrefs.loadMeals();
+    _mealRecords.clear();
+    _mealRecords.addAll(loaded);
     notifyListeners();
   }
 }

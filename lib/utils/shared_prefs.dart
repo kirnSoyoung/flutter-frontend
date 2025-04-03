@@ -1,11 +1,47 @@
 import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:intl/intl.dart';
 
 import '../models/user_model.dart';
+import '../models/meal_model.dart';
 
 /// SharedPreferences를 활용한 사용자 정보 관리 클래스
 class SharedPrefs {
+
+  static const String mealKey = 'meal_records';
+
+  static Future<void> saveMeals(Map<DateTime, List<Meal>> meals) async {
+    final prefs = await SharedPreferences.getInstance();
+    final Map<String, dynamic> jsonMap = {};
+
+    meals.forEach((date, mealList) {
+      final formattedDate = DateFormat('yyyy-MM-dd').format(date);
+      jsonMap[formattedDate] = mealList.map((meal) => meal.toJson()).toList();
+    });
+
+    final encoded = jsonEncode(jsonMap);
+    await prefs.setString(mealKey, encoded);
+  }
+
+  static Future<Map<DateTime, List<Meal>>> loadMeals() async {
+    final prefs = await SharedPreferences.getInstance();
+    final Map<DateTime, List<Meal>> loaded = {};
+
+    final encoded = prefs.getString(mealKey);
+    if (encoded == null) return loaded;
+
+    final decoded = jsonDecode(encoded) as Map<String, dynamic>;
+
+    decoded.forEach((dateStr, mealListJson) {
+      final date = DateFormat('yyyy-MM-dd').parse(dateStr);
+      final mealList = (mealListJson as List).map((json) => Meal.fromJson(json)).toList();
+      loaded[date] = mealList;
+    });
+
+    return loaded;
+  }
+
   static Future<List<User>> getUsers() async {
     final prefs = await SharedPreferences.getInstance();
     final String? storedUsers = prefs.getString('users');
@@ -70,5 +106,13 @@ class SharedPrefs {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('loggedInEmail');
     await prefs.remove('loggedInPassword');
+  }
+
+
+  /// 테스트용-데이터 삭제 버튼
+  void resetMeals() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove('meal_records'); // 우리가 저장했던 키
+    print('✅ 모든 저장된 식단 데이터를 삭제했습니다.');
   }
 }

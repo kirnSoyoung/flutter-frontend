@@ -201,7 +201,7 @@ class _HistoryPageState extends State<HistoryPage> {
                                   imagePath: meal.image.path,
                                   nutrients: meal.nutrients,
                                   selectedDate: _selectedDate!,
-                                  mealName: meal.mealName,
+                                  mealNames: meal.mealNames, // ✅ 리스트 전달
                                   isFromHistory: true,
                                 ),
                               ),

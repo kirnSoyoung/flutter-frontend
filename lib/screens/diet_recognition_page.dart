@@ -1,5 +1,4 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
@@ -112,15 +111,13 @@ class _DietRecognitionPageState extends State<DietRecognitionPage> {
 
     final nutrients = await fetchCombinedNutrients();
 
-    dataManager.addMeal(mealDate, File(selectedImagePath!), nutrients, selectedFoods.join(", "));
-
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(
         builder: (context) => NutritionResultPage(
           imagePath: selectedImagePath!,
           nutrients: nutrients,
           selectedDate: mealDate,
-          mealName: selectedFoods.join(", "),
+          mealNames: selectedFoods,
           isFromHistory: false,
         ),
       ),
@@ -141,7 +138,6 @@ class _DietRecognitionPageState extends State<DietRecognitionPage> {
           children: [
             Image.file(widget.image, width: double.infinity, height: 250, fit: BoxFit.cover),
             SizedBox(height: 16),
-
             TextField(
               controller: searchController,
               decoration: InputDecoration(
@@ -156,7 +152,6 @@ class _DietRecognitionPageState extends State<DietRecognitionPage> {
               ),
               onSubmitted: _addFoodFromSearch,
             ),
-
             SizedBox(height: 12),
             Wrap(
               spacing: 8,
@@ -166,7 +161,6 @@ class _DietRecognitionPageState extends State<DietRecognitionPage> {
                 onDeleted: () => setState(() => selectedFoods.remove(label)),
               )).toList(),
             ),
-
             SizedBox(height: 20),
             SizedBox(
               width: double.infinity,

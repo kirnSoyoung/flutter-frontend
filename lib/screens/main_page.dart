@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
 import '../utils/data_manager.dart';
 import '../utils/nutrition_standards.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../widgets/image_picker_widget.dart';
 import '../widgets/nutrient_gauge.dart';
 import '../theme/app_theme.dart';
@@ -72,6 +73,20 @@ class _HomePageState extends State<HomePage> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       mainAxisSize: MainAxisSize.min,
                       children: [
+
+                        /* 테스트용!!
+                        ElevatedButton(
+                          onPressed: () async {
+                            final prefs = await SharedPreferences.getInstance();
+                            await prefs.remove('meal_records');
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('✅ 모든 식단 데이터를 초기화했습니다!')),
+                            );
+                          },
+                          child: Text("식단 전체 초기화"),
+                        ),
+                        */
+
                         Icon(
                           Icons.restaurant_menu,
                           color: AppTheme.primaryColor,
@@ -188,7 +203,7 @@ class _HomePageState extends State<HomePage> {
                                           imagePath: meal.image.path,
                                           nutrients: meal.nutrients,
                                           selectedDate: today,
-                                          mealName: meal.mealName,
+                                          mealNames: meal.mealNames,
                                           isFromHistory: true,
                                         ),
                                       ),
