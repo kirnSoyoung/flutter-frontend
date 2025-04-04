@@ -10,6 +10,7 @@ import '../screens/diet_recognition_page.dart';
 import '../screens/nutrition_result_page.dart';
 import '../utils/data_manager.dart';
 import '../utils/nutrition_standards.dart';
+import '../utils/nutrient_utils.dart';
 import '../widgets/nutrient_gauge.dart';
 
 class HistoryPage extends StatefulWidget {
@@ -59,11 +60,15 @@ class _HistoryPageState extends State<HistoryPage> {
     for (var key in averageDailyRequirements.keys) {
       intake[key] = 0.0;
     }
+
     for (var meal in meals) {
-      meal.nutrients.forEach((key, value) {
-        if (intake.containsKey(key)) {
-          intake[key] = intake[key]! + value;
-        }
+      meal.nutrients.forEach((food, nutrientMap) {
+        nutrientMap.forEach((key, value) {
+          final normalized = normalizeNutrientKey(key);
+          if (intake.containsKey(normalized)) {
+            intake[normalized] = intake[normalized]! + value;
+          }
+        });
       });
     }
     return intake;

@@ -17,7 +17,7 @@ class ApiService {
         final decodedBody = utf8.decode(response.bodyBytes);
         final data = jsonDecode(decodedBody);
 
-        print("🔥 서버 응답 데이터: $data");
+        // print("🔥 서버 응답 데이터: $data");
 
         final result = <String, double>{};
 
@@ -27,8 +27,6 @@ class ApiService {
               final name = item['name'].toString();
               final rawValue = item['value'];
               final parsed = double.tryParse(rawValue.toString());
-
-              print("🔍 $name: $rawValue → \${parsed ?? '파싱 실패'}");
 
               if (parsed != null) {
                 result[name] = parsed;
@@ -44,7 +42,7 @@ class ApiService {
           });
         }
 
-        print("🔥 파싱된 결과: $result");
+        // print("🔥 파싱된 결과: $result");
         return result;
       }
     } catch (e) {

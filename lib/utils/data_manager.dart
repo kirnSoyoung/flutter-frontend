@@ -13,14 +13,14 @@ class DataManager extends ChangeNotifier {
     return _mealRecords[normalizedDate];
   }
 
-  void addMeal(DateTime date, File image, Map<String, double> nutrients, List<String> mealNames) {
+  void addMeal(DateTime date, File image, Map<String, Map<String, double>> perFoodNutrients, List<String> mealNames) {
     DateTime normalizedDate = DateTime(date.year, date.month, date.day);
     _mealRecords[normalizedDate] ??= [];
 
     _mealRecords[normalizedDate]!.add(
       Meal(
         image: image,
-        nutrients: nutrients,
+        nutrients: perFoodNutrients, // ✅ 전체 합산이 아닌 음식별 Map 저장
         mealNames: mealNames,
       ),
     );

@@ -24,3 +24,8 @@ String getNutrientUnit(String label) {
 
   return '';
 }
+
+String normalizeNutrientKey(String label) {
+  return label.split('(')[0].trim();
+}
+

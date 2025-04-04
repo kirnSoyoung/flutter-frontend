@@ -55,8 +55,10 @@ class _SupplementPageState extends State<SupplementPage> {
       final meals = dataManager.getMealsForDate(date) ?? [];
 
       for (var meal in meals) {
-        meal.nutrients.forEach((key, value) {
-          totalNutrients[key] = (totalNutrients[key] ?? 0) + value;
+        meal.nutrients.forEach((food, nutrientMap) {
+          nutrientMap.forEach((nutrient, value) {
+            totalNutrients[nutrient] = (totalNutrients[nutrient] ?? 0) + value;
+          });
         });
       }
     }

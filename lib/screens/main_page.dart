@@ -2,13 +2,16 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
-import '../models/meal_model.dart';
 import '../utils/data_manager.dart';
 import '../utils/nutrition_standards.dart';
+import '../utils/nutrient_utils.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../widgets/image_picker_widget.dart';
 import '../widgets/nutrient_gauge.dart';
 import '../theme/app_theme.dart';
 import 'diet_recognition_page.dart';
 import 'nutrition_result_page.dart';
+import '../models/meal_model.dart';
 
 class HomePage extends StatefulWidget {
   final String email;
@@ -19,7 +22,7 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  String selectedPeriod = 'day'; // 'day', 'week', 'month'
+  String selectedPeriod = 'day';
   final int mealsPerDay = 3;
 
   void setImage(File image) {
@@ -34,8 +37,14 @@ class _HomePageState extends State<HomePage> {
   }
 
   List<Meal> getMealsInRange(Map<DateTime, List<Meal>> allMeals, DateTime start, DateTime end) {
+    DateTime normStart = DateTime(start.year, start.month, start.day);
+    DateTime normEnd = DateTime(end.year, end.month, end.day);
+
     return allMeals.entries
-        .where((entry) => entry.key.isAfter(start.subtract(Duration(days: 1))) && entry.key.isBefore(end.add(Duration(days: 1))))
+        .where((entry) {
+      final date = DateTime(entry.key.year, entry.key.month, entry.key.day);
+      return !date.isBefore(normStart) && !date.isAfter(normEnd);
+    })
         .expand((entry) => entry.value)
         .toList();
   }
@@ -44,11 +53,15 @@ class _HomePageState extends State<HomePage> {
     Map<String, double> total = {
       for (var key in averageDailyRequirements.keys) key: 0.0
     };
+
     for (var meal in meals) {
-      meal.nutrients.forEach((key, value) {
-        if (total.containsKey(key)) {
-          total[key] = total[key]! + value;
-        }
+      meal.nutrients.forEach((food, nutrientMap) {
+        nutrientMap.forEach((key, value) {
+          final normalized = normalizeNutrientKey(key);
+          if (total.containsKey(normalized)) {
+            total[normalized] = total[normalized]! + value;
+          }
+        });
       });
     }
     return total;
@@ -182,7 +195,6 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ),
                       SizedBox(height: 32),
-
                       if (meals.isNotEmpty) ...[
                         Text(
                           getPeriodLabel() + " 식사 기록",
@@ -228,7 +240,6 @@ class _HomePageState extends State<HomePage> {
                         ),
                         SizedBox(height: 32),
                       ],
-
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: ['day', 'week', 'month'].map((period) {
@@ -252,7 +263,6 @@ class _HomePageState extends State<HomePage> {
                         }).toList(),
                       ),
                       SizedBox(height: 16),
-
                       Text(
                         getPeriodLabel() + " 영양소 섭취량",
                         style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),

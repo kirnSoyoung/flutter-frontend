@@ -11,10 +11,10 @@ import 'diet_recognition_page.dart';
 
 class NutritionResultPage extends StatefulWidget {
   final String imagePath;
-  final Map<String, double> nutrients;
+  final Map<String, Map<String, double>> nutrients; // ✅ 변경됨: 음식별 영양소
   final bool isFromHistory;
   final DateTime? selectedDate;
-  final List<String> mealNames; // ✅ 리스트로 변경
+  final List<String> mealNames;
 
   const NutritionResultPage({
     required this.imagePath,
@@ -31,39 +31,59 @@ class NutritionResultPage extends StatefulWidget {
 class _NutritionResultPageState extends State<NutritionResultPage> {
   bool _isLoading = true;
   bool _isSaved = false;
-  Map<String, double> _nutrients = {};
+  Map<String, double> _displayedNutrients = {};
+  String? _selectedFood;
 
   @override
   void initState() {
     super.initState();
-    _loadNutrientData();
+    _prepareNutrientData();
   }
 
-  Future<void> _loadNutrientData() async {
-    String normalizeKey(String raw) {
-      return raw.replaceAll(RegExp(r'\s*\(.*?\)'), '').trim();
+  Map<String, double> _sumAllNutrients(Map<String, Map<String, double>> perFoodMap) {
+    final total = <String, double>{};
+    for (final food in perFoodMap.values) {
+      for (final entry in food.entries) {
+        final normKey = _normalizeKey(entry.key);
+        if (averageDailyRequirements.containsKey(normKey)) {
+          total[normKey] = (total[normKey] ?? 0) + entry.value;
+        }
+      }
     }
+    return total;
+  }
 
-    final filtered = <String, double>{};
+  String _normalizeKey(String raw) {
+    return raw.replaceAll(RegExp(r'\s*\(.*?\)'), '').trim();
+  }
 
-    widget.nutrients.forEach((rawKey, value) {
-      final normalized = normalizeKey(rawKey);
-      if (averageDailyRequirements.containsKey(normalized)) {
-        filtered[normalized] = value;
+  Future<void> _prepareNutrientData() async {
+    final total = _sumAllNutrients(widget.nutrients);
+    setState(() {
+      _displayedNutrients = total;
+      _isLoading = false;
+    });
+  }
+
+  void _toggleFood(String name) {
+    setState(() {
+      if (_selectedFood == name) {
+        _selectedFood = null;
+        _displayedNutrients = _sumAllNutrients(widget.nutrients);
       } else {
-        print("❌ 매칭 실패: '$normalized'");
+        _selectedFood = name;
+        final selectedMap = widget.nutrients[name] ?? {};
+        final filtered = <String, double>{};
+        selectedMap.forEach((key, value) {
+          final normKey = _normalizeKey(key);
+          if (averageDailyRequirements.containsKey(normKey)) {
+            filtered[normKey] = value;
+          }
+        });
+        _displayedNutrients = filtered;
       }
     });
-
-    print("✅ 필터링 후 최종 nutrients:");
-    print(filtered);
-
-    _nutrients = filtered;
-    setState(() => _isLoading = false);
   }
-
-
-
 
   void _saveMeal() {
     if (_isSaved) return;
@@ -73,7 +93,7 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
     dataManager.addMeal(
       date,
       File(widget.imagePath),
-      _nutrients,
+      widget.nutrients, // ✅ 음식별 Map 자체 저장
       widget.mealNames,
     );
     setState(() => _isSaved = true);
@@ -192,16 +212,18 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
-                    children: widget.mealNames.map((name) => Chip(
+                    children: widget.mealNames.map((name) => ChoiceChip(
                       label: Text(name),
-                      backgroundColor: Colors.green[100],
+                      selected: _selectedFood == name,
+                      onSelected: (_) => _toggleFood(name),
+                      selectedColor: Colors.green[200],
                     )).toList(),
                   ),
                   const SizedBox(height: 20),
                   Column(
                     children: averageDailyRequirements.entries.map((entry) {
                       final label = entry.key;
-                      final current = _nutrients[label] ?? 0.0;
+                      final current = _displayedNutrients[label] ?? 0.0;
                       return NutrientGauge(
                         label: label,
                         currentValue: current,

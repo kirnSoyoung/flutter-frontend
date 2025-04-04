@@ -45,6 +45,11 @@ class _DietRecognitionPageState extends State<DietRecognitionPage> {
     _loadFoodList();
   }
 
+  Future<void> _loadFoodList() async {
+    mealOptions = await loadFoodList();
+    setState(() {});
+  }
+
   Future<void> _saveMealImage(File imageFile) async {
     String? savedPath = await FileManager.saveImageToStorage(XFile(imageFile.path));
     if (savedPath != null) {
@@ -73,9 +78,37 @@ class _DietRecognitionPageState extends State<DietRecognitionPage> {
     setState(() => isUploading = false);
   }
 
-  Future<void> _loadFoodList() async {
-    mealOptions = await loadFoodList();
-    setState(() {});
+  Future<Map<String, Map<String, double>>> fetchIndividualNutrients() async {
+    Map<String, Map<String, double>> result = {};
+
+    for (String food in selectedFoods) {
+      final nutrients = await ApiService.fetchNutrientsByName(food);
+      if (nutrients != null) {
+        result[food] = nutrients;
+      }
+    }
+    return result;
+  }
+
+  Future<void> proceedToAnalysis() async {
+    final dataManager = Provider.of<DataManager>(context, listen: false);
+    final DateTime mealDate = widget.selectedDate ?? DateTime.now();
+    if (selectedImagePath == null || selectedFoods.isEmpty) return;
+
+    final nutrientsByFood = await fetchIndividualNutrients();
+
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(
+        builder: (context) => NutritionResultPage(
+          imagePath: selectedImagePath!,
+          nutrients: nutrientsByFood,
+          selectedDate: mealDate,
+          mealNames: selectedFoods,
+          isFromHistory: false,
+        ),
+      ),
+          (route) => route.isFirst,
+    );
   }
 
   void _addFoodFromSearch(String input) {
@@ -101,42 +134,6 @@ class _DietRecognitionPageState extends State<DietRecognitionPage> {
           (f) => f.label == label,
       orElse: () => RecognizedFood(label, -1),
     ).confidence;
-  }
-
-  Future<Map<String, double>> fetchCombinedNutrients() async {
-    Map<String, double> combined = {};
-
-    for (String food in selectedFoods) {
-      final nutrients = await ApiService.fetchNutrientsByName(food);
-      if (nutrients != null) {
-        nutrients.forEach((k, v) {
-          combined[k] = (combined[k] ?? 0) + v;
-        });
-      }
-    }
-
-    return combined;
-  }
-
-  void proceedToAnalysis() async {
-    final dataManager = Provider.of<DataManager>(context, listen: false);
-    final DateTime mealDate = widget.selectedDate ?? DateTime.now();
-    if (selectedImagePath == null || selectedFoods.isEmpty) return;
-
-    final nutrients = await fetchCombinedNutrients();
-
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(
-        builder: (context) => NutritionResultPage(
-          imagePath: selectedImagePath!,
-          nutrients: nutrients,
-          selectedDate: mealDate,
-          mealNames: selectedFoods,
-          isFromHistory: false,
-        ),
-      ),
-          (route) => route.isFirst,
-    );
   }
 
   @override
