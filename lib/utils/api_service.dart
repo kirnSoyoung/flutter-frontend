@@ -20,13 +20,31 @@ class ApiService {
         print("🔥 서버 응답 데이터: $data");
 
         final result = <String, double>{};
-        data.forEach((key, value) {
-          if (value is num) {
-            result[key] = value.toDouble();
-          }
-        });
 
-        print("🔥 UTF8 디코딩 후 결과: $result");
+        if (data is List) {
+          for (var item in data) {
+            if (item is Map && item.containsKey('name') && item.containsKey('value')) {
+              final name = item['name'].toString();
+              final rawValue = item['value'];
+              final parsed = double.tryParse(rawValue.toString());
+
+              print("🔍 $name: $rawValue → \${parsed ?? '파싱 실패'}");
+
+              if (parsed != null) {
+                result[name] = parsed;
+              }
+            }
+          }
+        } else if (data is Map<String, dynamic>) {
+          data.forEach((key, value) {
+            final parsed = double.tryParse(value.toString());
+            if (parsed != null) {
+              result[key] = parsed;
+            }
+          });
+        }
+
+        print("🔥 파싱된 결과: $result");
         return result;
       }
     } catch (e) {
@@ -36,8 +54,6 @@ class ApiService {
     print("⚠️ API 실패 또는 데이터 없음. 임시 testNutrients 사용");
     return testNutrients;
   }
-
-
 
   static Future<List<Map<String, String>>> fetchSupplements(String nutrient) async {
     try {

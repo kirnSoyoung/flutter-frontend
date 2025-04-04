@@ -89,6 +89,20 @@ class _DietRecognitionPageState extends State<DietRecognitionPage> {
     }
   }
 
+  List<String> getFilteredSuggestions(String query) {
+    return mealOptions
+        .where((option) =>
+    option.contains(query) && !selectedFoods.contains(option))
+        .toList();
+  }
+
+  double? getConfidence(String label) {
+    return recognizedFoods.firstWhere(
+          (f) => f.label == label,
+      orElse: () => RecognizedFood(label, -1),
+    ).confidence;
+  }
+
   Future<Map<String, double>> fetchCombinedNutrients() async {
     Map<String, double> combined = {};
 
@@ -127,6 +141,8 @@ class _DietRecognitionPageState extends State<DietRecognitionPage> {
 
   @override
   Widget build(BuildContext context) {
+    final suggestions = getFilteredSuggestions(searchController.text);
+
     return Scaffold(
       appBar: AppBar(title: Text("식단 인식")),
       body: isUploading
@@ -150,8 +166,36 @@ class _DietRecognitionPageState extends State<DietRecognitionPage> {
                     : null,
                 border: OutlineInputBorder(),
               ),
+              onChanged: (_) => setState(() {}),
               onSubmitted: _addFoodFromSearch,
             ),
+            if (searchController.text.isNotEmpty && suggestions.isNotEmpty)
+              Container(
+                constraints: BoxConstraints(maxHeight: 200),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border.all(color: Colors.grey.shade300),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: ListView(
+                  shrinkWrap: true,
+                  children: suggestions.map((s) {
+                    final confidence = getConfidence(s);
+                    final labelText = confidence != null && confidence > 0
+                        ? "$s (${(confidence * 100).toStringAsFixed(0)}%)"
+                        : s;
+                    return ListTile(
+                      title: Text(labelText),
+                      onTap: () {
+                        setState(() {
+                          selectedFoods.add(s);
+                          searchController.clear();
+                        });
+                      },
+                    );
+                  }).toList(),
+                ),
+              ),
             SizedBox(height: 12),
             Wrap(
               spacing: 8,

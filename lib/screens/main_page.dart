@@ -108,7 +108,7 @@ class _HomePageState extends State<HomePage> {
                         Icon(Icons.restaurant_menu, color: AppTheme.primaryColor, size: 24),
                         SizedBox(width: 8),
                         Text(
-                          getPeriodLabel() + " 식단",
+                          "오늘의 식단",
                           style: TextStyle(
                             color: AppTheme.primaryColor,
                             fontSize: 20,

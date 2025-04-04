@@ -40,13 +40,6 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
   }
 
   Future<void> _loadNutrientData() async {
-    /*
-    print("📋 서버에서 받은 nutrient 키들:");
-    widget.nutrients.keys.forEach(print);
-
-    print("🎯 우리가 사용하는 키 목록:");
-    averageDailyRequirements.keys.forEach(print);
-    */
     String normalizeKey(String raw) {
       return raw.replaceAll(RegExp(r'\s*\(.*?\)'), '').trim();
     }
