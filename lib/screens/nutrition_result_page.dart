@@ -11,10 +11,11 @@ import 'diet_recognition_page.dart';
 
 class NutritionResultPage extends StatefulWidget {
   final String imagePath;
-  final Map<String, Map<String, double>> nutrients; // ✅ 변경됨: 음식별 영양소
+  final Map<String, Map<String, double>> nutrients;
   final bool isFromHistory;
   final DateTime? selectedDate;
   final List<String> mealNames;
+  final Meal? sourceMeal; // ✅ 추가됨
 
   const NutritionResultPage({
     required this.imagePath,
@@ -22,6 +23,7 @@ class NutritionResultPage extends StatefulWidget {
     required this.mealNames,
     this.isFromHistory = false,
     this.selectedDate,
+    this.sourceMeal,
   });
 
   @override
@@ -54,7 +56,7 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
   }
 
   String _normalizeKey(String raw) {
-    return raw.replaceAll(RegExp(r'\s*\(.*?\)'), '').trim();
+    return raw.split('(')[0].trim();
   }
 
   Future<void> _prepareNutrientData() async {
@@ -90,12 +92,17 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
     final dataManager = Provider.of<DataManager>(context, listen: false);
     final date = widget.selectedDate ?? DateTime.now();
 
+    if (widget.sourceMeal != null) {
+      dataManager.deleteMeal(widget.sourceMeal!, date);
+    }
+
     dataManager.addMeal(
       date,
       File(widget.imagePath),
-      widget.nutrients, // ✅ 음식별 Map 자체 저장
+      widget.nutrients,
       widget.mealNames,
     );
+
     setState(() => _isSaved = true);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('식단이 저장되었습니다.')),
@@ -163,6 +170,7 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
                   builder: (context) => DietRecognitionPage(
                     image: File(widget.imagePath),
                     selectedDate: widget.selectedDate,
+                    sourceMeal: widget.sourceMeal, // ✅ 추가됨
                   ),
                 ),
               );

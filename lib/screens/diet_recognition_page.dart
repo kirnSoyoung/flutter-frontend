@@ -19,10 +19,12 @@ class RecognizedFood {
 class DietRecognitionPage extends StatefulWidget {
   final File image;
   final DateTime? selectedDate;
+  final Meal? sourceMeal; // ✅ 추가됨
 
   const DietRecognitionPage({
     required this.image,
     this.selectedDate,
+    this.sourceMeal,
   });
 
   @override
@@ -105,6 +107,7 @@ class _DietRecognitionPageState extends State<DietRecognitionPage> {
           selectedDate: mealDate,
           mealNames: selectedFoods,
           isFromHistory: false,
+          sourceMeal: widget.sourceMeal, // ✅ 전달됨!
         ),
       ),
           (route) => route.isFirst,
@@ -179,7 +182,7 @@ class _DietRecognitionPageState extends State<DietRecognitionPage> {
                   children: suggestions.map((s) {
                     final confidence = getConfidence(s);
                     final labelText = confidence != null && confidence > 0
-                        ? "$s (${(confidence * 100).toStringAsFixed(0)}%)"
+                        ? "$s (\${(confidence * 100).toStringAsFixed(0)}%)"
                         : s;
                     return ListTile(
                       title: Text(labelText),

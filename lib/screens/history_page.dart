@@ -12,6 +12,7 @@ import '../utils/data_manager.dart';
 import '../utils/nutrition_standards.dart';
 import '../utils/nutrient_utils.dart';
 import '../widgets/nutrient_gauge.dart';
+import '../models/meal_model.dart';
 
 class HistoryPage extends StatefulWidget {
   @override
@@ -206,8 +207,9 @@ class _HistoryPageState extends State<HistoryPage> {
                                   imagePath: meal.image.path,
                                   nutrients: meal.nutrients,
                                   selectedDate: _selectedDate!,
-                                  mealNames: meal.mealNames, // ✅ 리스트 전달
+                                  mealNames: meal.mealNames,
                                   isFromHistory: true,
+                                  sourceMeal: meal, // ✅ 추가됨
                                 ),
                               ),
                             );

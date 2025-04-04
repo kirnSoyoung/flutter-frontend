@@ -31,15 +31,49 @@ class DataManager extends ChangeNotifier {
 
   void deleteMealByImagePath(DateTime date, String imagePath) {
     DateTime normalizedDate = DateTime(date.year, date.month, date.day);
+    print("🗑️ 삭제 시도: $normalizedDate, path: $imagePath");
+
     if (_mealRecords.containsKey(normalizedDate)) {
-      _mealRecords[normalizedDate]!.removeWhere((meal) => meal.image.path == imagePath);
+      _mealRecords[normalizedDate]!.forEach((meal) {
+        print("🔍 비교 대상 path: ${meal.image.path}");
+      });
+
+      _mealRecords[normalizedDate]!.removeWhere(
+            (meal) => meal.image.path.trim() == imagePath.trim(),
+      );
+
       if (_mealRecords[normalizedDate]!.isEmpty) {
         _mealRecords.remove(normalizedDate);
       }
+
       saveMeals();
       notifyListeners();
     }
   }
+
+  void deleteMeal(Meal target, DateTime date) {
+    DateTime normalizedDate = DateTime(date.year, date.month, date.day);
+    print("🗑️ 삭제 시도 (Meal): $normalizedDate, path: ${target.image.path}");
+
+    if (_mealRecords.containsKey(normalizedDate)) {
+      _mealRecords[normalizedDate]!.forEach((meal) {
+        print("🔍 비교 대상: ${meal.image.path} / ${meal.mealNames}");
+      });
+
+      _mealRecords[normalizedDate]!.removeWhere((meal) =>
+      meal.image.path.trim() == target.image.path.trim() &&
+          meal.mealNames.toString() == target.mealNames.toString()
+      );
+
+      if (_mealRecords[normalizedDate]!.isEmpty) {
+        _mealRecords.remove(normalizedDate);
+      }
+
+      saveMeals();
+      notifyListeners();
+    }
+  }
+
 
   void saveMeals() {
     SharedPrefs.saveMeals(_mealRecords);
