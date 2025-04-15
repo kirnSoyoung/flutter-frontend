@@ -46,17 +46,12 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
     final total = <String, double>{};
     for (final food in perFoodMap.values) {
       for (final entry in food.entries) {
-        final normKey = _normalizeKey(entry.key);
-        if (averageDailyRequirements.containsKey(normKey)) {
-          total[normKey] = (total[normKey] ?? 0) + entry.value;
+        if (averageDailyRequirements.containsKey(entry.key)) {
+          total[entry.key] = (total[entry.key] ?? 0) + entry.value;
         }
       }
     }
     return total;
-  }
-
-  String _normalizeKey(String raw) {
-    return raw.split('(')[0].trim();
   }
 
   Future<void> _prepareNutrientData() async {
@@ -77,9 +72,8 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
         final selectedMap = widget.nutrients[name] ?? {};
         final filtered = <String, double>{};
         selectedMap.forEach((key, value) {
-          final normKey = _normalizeKey(key);
-          if (averageDailyRequirements.containsKey(normKey)) {
-            filtered[normKey] = value;
+          if (averageDailyRequirements.containsKey(key)) {
+            filtered[key] = value;
           }
         });
         _displayedNutrients = filtered;

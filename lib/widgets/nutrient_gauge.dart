@@ -18,7 +18,7 @@ class NutrientGauge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final String normLabel = _normalizeNutrient(label); // ✅ 영양소 정규화 (괄호 제거)
+    final String normLabel = _normalizeNutrient(label);
     final double maxValue = averageDailyRequirements[normLabel] ?? 100;
     final double percentage = ((currentValue / maxValue) * 100).clamp(0.0, 999.9);
 
