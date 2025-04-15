@@ -8,6 +8,7 @@ import '../utils/data_manager.dart';
 import '../utils/file_manager.dart';
 import '../utils/food_list.dart';
 import '../utils/api_service.dart';
+import '../utils/nutrient_utils.dart';
 import 'nutrition_result_page.dart';
 
 class RecognizedFood {
@@ -86,11 +87,20 @@ class _DietRecognitionPageState extends State<DietRecognitionPage> {
     for (String food in selectedFoods) {
       final nutrients = await ApiService.fetchNutrientsByName(food);
       if (nutrients != null) {
-        result[food] = nutrients;
+        final normalized = <String, double>{};
+
+        nutrients.forEach((label, value) {
+          final normLabel = normalizeNutrientKey(label); // label 정규화 (e.g. "비타민C (mg)" → "비타민C")
+          final normValue = normalizeToMg(label, value); // value 정규화 (e.g. 1000000 → 100)
+          normalized[normLabel] = normValue;
+        });
+
+        result[food] = normalized; // ✅ 여기서부터는 정규화된 key/value만 사용!
       }
     }
     return result;
   }
+
 
   Future<void> proceedToAnalysis() async {
     final dataManager = Provider.of<DataManager>(context, listen: false);

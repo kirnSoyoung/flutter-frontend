@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../utils/nutrition_standards.dart';
+import '../utils/nutrient_utils.dart';
 import '../theme/app_theme.dart';
 
 class NutrientGauge extends StatelessWidget {
@@ -17,8 +18,9 @@ class NutrientGauge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final double maxValue = averageDailyRequirements[label] ?? 100;
-    final double percentage = ((currentValue / maxValue) * 100);
+    final String normLabel = _normalizeNutrient(label); // ✅ 영양소 정규화 (괄호 제거)
+    final double maxValue = averageDailyRequirements[normLabel] ?? 100;
+    final double percentage = ((currentValue / maxValue) * 100).clamp(0.0, 999.9);
 
     // 섭취량 상태 결정
     NutrientStatus status = _getNutrientStatus(percentage);
@@ -70,7 +72,7 @@ class NutrientGauge extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      "${currentValue.toStringAsFixed(1)} ${nutrientUnits[label] ?? ''}",
+                      formatNutrientValue(label, currentValue),
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w500,
