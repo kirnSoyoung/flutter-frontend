@@ -12,6 +12,7 @@ import '../utils/data_manager.dart';
 import '../utils/nutrition_standards.dart';
 import '../utils/nutrient_utils.dart';
 import '../widgets/nutrient_gauge.dart';
+import '../widgets/box_section.dart';
 import '../models/meal_model.dart';
 
 class HistoryPage extends StatefulWidget {
@@ -103,7 +104,7 @@ class _HistoryPageState extends State<HistoryPage> {
           }
         },
         backgroundColor: Theme.of(context).primaryColor,
-        child: const Icon(Icons.add_a_photo, color: Colors.white),
+        child: const Icon(Icons.photo_library, color: Colors.white),
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -234,34 +235,14 @@ class _HistoryPageState extends State<HistoryPage> {
                   const SizedBox(height: 20),
                   if (meals.isNotEmpty) ...[
                     Text(
-                      DateFormat('MM월 dd일의 영양소 섭취량', 'ko_KR')
-                          .format(_selectedDate!),
-                      style:
-                      TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      DateFormat('MM월 dd일의 영양소 섭취량', 'ko_KR').format(_selectedDate!),
+                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 10),
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[100],
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Column(
-                        children:
-                        averageDailyRequirements.entries.map((entry) {
-                          final label = entry.key;
-                          final current = dailyIntake[label] ?? 0.0;
-                          return NutrientGauge(
-                            label: label,
-                            currentValue: current,
-                            mealsPerDay: 3,
-                            isDailyTotal: true,
-                          );
-                        }).toList(),
-                      ),
-                    ),
+                    GroupedNutrientSection(intakeMap: dailyIntake,),
                     const SizedBox(height: 80),
                   ],
+
                 ],
               ),
             ),

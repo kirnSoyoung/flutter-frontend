@@ -6,7 +6,11 @@ import 'package:provider/provider.dart';
 import '../models/meal_model.dart';
 import '../utils/data_manager.dart';
 import '../utils/nutrition_standards.dart';
+import '../utils/nutrient_utils.dart';
 import '../widgets/nutrient_gauge.dart';
+import '../widgets/nutrient_box.dart';
+import '../widgets/box_section.dart';
+
 import 'diet_recognition_page.dart';
 
 class NutritionResultPage extends StatefulWidget {
@@ -66,11 +70,11 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
     final total = widget.isFromHistory
         ? _sumAllNutrients(
       widget.nutrients,
-      { for (var k in widget.mealNames) k: 1.0 }, // ✅ 저장된 값은 이미 곱해져 있으므로 다시 곱하지 않음
+      { for (var k in widget.mealNames) k: 1.0 },
     )
         : _sumAllNutrients(
       widget.nutrients,
-      widget.servingsMap, // ✅ 분석 후 결과는 인분 수 곱해서 계산
+      widget.servingsMap,
     );
 
     setState(() {
@@ -109,7 +113,6 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
     final dataManager = Provider.of<DataManager>(context, listen: false);
     final date = widget.selectedDate ?? DateTime.now();
 
-    // ✅ 기존 식단 이미지 기준으로 삭제
     dataManager.deleteMealByImagePath(date, widget.imagePath);
 
     final scaledNutrients = <String, Map<String, double>>{};
@@ -219,6 +222,11 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
 
   @override
   Widget build(BuildContext context) {
+    final groupPercents = calculateGroupPercents(
+      _displayedNutrients,
+      averageDailyRequirements,
+    );
+
     return Scaffold(
       appBar: AppBar(
         title: Text("영양소 분석 결과"),
@@ -258,19 +266,7 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
                       );
                     }).toList(),
                   ),
-                  const SizedBox(height: 20),
-                  Column(
-                    children: averageDailyRequirements.entries.map((entry) {
-                      final label = entry.key;
-                      final current = _displayedNutrients[label] ?? 0.0;
-                      return NutrientGauge(
-                        label: label,
-                        currentValue: current,
-                        mealsPerDay: 3,
-                        isDailyTotal: false,
-                      );
-                    }).toList(),
-                  ),
+                  GroupedNutrientSection(intakeMap: _displayedNutrients),
                 ],
               ),
             ),

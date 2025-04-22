@@ -214,8 +214,8 @@ class _DietRecognitionPageState extends State<DietRecognitionPage> {
                   shrinkWrap: true,
                   children: suggestions.map((s) {
                     final confidence = getConfidence(s);
-                    final labelText = confidence != null && confidence > 0
-                        ? "$s (\${(confidence * 100).toStringAsFixed(0)}%)"
+                    final labelText = (confidence != null && confidence > 0)
+                        ? "$s (${(confidence * 100).toStringAsFixed(0)}%)"
                         : s;
                     return ListTile(
                       title: Text(labelText),

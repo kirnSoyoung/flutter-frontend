@@ -51,3 +51,33 @@ double normalizeToMg(String label, double value) {
  else return value;
   return value; // mg
 }
+
+const Map<String, List<String>> nutrientGroups = {
+  "에너지": ["에너지"],
+  "탄수화물/식이섬유": ["탄수화물", "식이섬유"],
+  "단백질/지방": ["단백질", "지방", "오메가 3 지방산"],
+  "비타민": ["비타민A", "비타민B1", "비타민B2", "비타민B6", "비타민B12", "비타민C", "비타민D", "비타민E", "비타민K", "엽산", "비오틴", "나이아신", "판토텐산"],
+  "미네랄": ["칼슘", "마그네슘", "철", "아연", "구리", "망간", "요오드", "셀레늄", "인", "나트륨", "칼륨"],
+};
+
+Map<String, double> calculateGroupPercents(Map<String, double> intake, Map<String, double> standards) {
+  final result = <String, double>{};
+
+  nutrientGroups.forEach((groupName, nutrientList) {
+    double sumPercent = 0;
+    int count = 0;
+
+    for (final nutrient in nutrientList) {
+      if (intake.containsKey(nutrient) && standards.containsKey(nutrient)) {
+        final ratio = intake[nutrient]! / standards[nutrient]!;
+        sumPercent += ratio;
+        count++;
+      }
+    }
+
+    result[groupName] = count > 0 ? sumPercent / count : 0.0;
+  });
+
+  return result;
+}
+
