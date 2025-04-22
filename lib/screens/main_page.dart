@@ -59,13 +59,16 @@ class _HomePageState extends State<HomePage> {
         nutrientMap.forEach((key, value) {
           final normalized = normalizeNutrientKey(key);
           if (total.containsKey(normalized)) {
-            total[normalized] = total[normalized]! + value;
+            total[normalized] = total[normalized]! + value; // ✅ 단순 합산
           }
         });
       });
     }
+
     return total;
   }
+
+
 
   String getPeriodLabel() {
     switch (selectedPeriod) {
@@ -219,6 +222,7 @@ class _HomePageState extends State<HomePage> {
                                         selectedDate: today,
                                         mealNames: meal.mealNames,
                                         isFromHistory: true,
+                                        servingsMap: meal.servings,
                                       ),
                                     ),
                                   );

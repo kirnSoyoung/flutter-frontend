@@ -7,6 +7,7 @@ class User {
   final double height; // 키 (cm)
   final double weight; // 몸무게 (kg)
   final String activityLevel; // 활동 수준 (예: 낮음, 보통, 높음)
+  final double servingSize;
 
   User({
     required this.email,
@@ -16,6 +17,7 @@ class User {
     required this.height,
     required this.weight,
     required this.activityLevel,
+    required this.servingSize,
   });
 
   /// 사용자 정보를 JSON 형식으로 변환
@@ -27,6 +29,7 @@ class User {
     'height': height,
     'weight': weight,
     'activityLevel': activityLevel,
+    'servingSize': servingSize,
   };
 
   /// JSON 데이터를 `User` 객체로 변환하는 팩토리 생성자
@@ -39,6 +42,7 @@ class User {
       height: (json['height'] ?? 170.0).toDouble(), // 기본값: 170cm
       weight: (json['weight'] ?? 60.0).toDouble(), // 기본값: 60kg
       activityLevel: json['activityLevel'] ?? '보통', // 기본값: 보통
+      servingSize: (json['servingSize'] ?? 1.0).toDouble(), // 기본값 1.0
     );
   }
 }

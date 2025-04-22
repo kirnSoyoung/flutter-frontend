@@ -15,7 +15,8 @@ class NutritionResultPage extends StatefulWidget {
   final bool isFromHistory;
   final DateTime? selectedDate;
   final List<String> mealNames;
-  final Meal? sourceMeal; // ✅ 추가됨
+  final Meal? sourceMeal;
+  final Map<String, double> servingsMap;
 
   const NutritionResultPage({
     required this.imagePath,
@@ -24,6 +25,7 @@ class NutritionResultPage extends StatefulWidget {
     this.isFromHistory = false,
     this.selectedDate,
     this.sourceMeal,
+    required this.servingsMap,
   });
 
   @override
@@ -42,59 +44,89 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
     _prepareNutrientData();
   }
 
-  Map<String, double> _sumAllNutrients(Map<String, Map<String, double>> perFoodMap) {
+  Map<String, double> _sumAllNutrients(Map<String, Map<String, double>> perFoodMap, Map<String, double> servings) {
     final total = <String, double>{};
-    for (final food in perFoodMap.values) {
-      for (final entry in food.entries) {
-        if (averageDailyRequirements.containsKey(entry.key)) {
-          total[entry.key] = (total[entry.key] ?? 0) + entry.value;
-        }
+    for (final food in perFoodMap.entries) {
+      final foodName = food.key;
+      final nutrientMap = food.value;
+      final multiplier = servings[foodName] ?? 1.0;
+
+      for (final entry in nutrientMap.entries) {
+        final key = entry.key;
+        final value = entry.value;
+        total[key] = (total[key] ?? 0.0) + (value * multiplier);
       }
+      print("🔍 $foodName: multiplier = ${servings[foodName]}, nutrients = $nutrientMap");
     }
+
     return total;
   }
 
   Future<void> _prepareNutrientData() async {
-    final total = _sumAllNutrients(widget.nutrients);
+    final total = widget.isFromHistory
+        ? _sumAllNutrients(
+      widget.nutrients,
+      { for (var k in widget.mealNames) k: 1.0 }, // ✅ 저장된 값은 이미 곱해져 있으므로 다시 곱하지 않음
+    )
+        : _sumAllNutrients(
+      widget.nutrients,
+      widget.servingsMap, // ✅ 분석 후 결과는 인분 수 곱해서 계산
+    );
+
     setState(() {
       _displayedNutrients = total;
       _isLoading = false;
     });
   }
 
+
   void _toggleFood(String name) {
     setState(() {
       if (_selectedFood == name) {
         _selectedFood = null;
-        _displayedNutrients = _sumAllNutrients(widget.nutrients);
+        _displayedNutrients = _sumAllNutrients(
+          widget.nutrients,
+          widget.isFromHistory
+              ? { for (var k in widget.mealNames) k: 1.0 }
+              : widget.servingsMap,
+        );
       } else {
         _selectedFood = name;
         final selectedMap = widget.nutrients[name] ?? {};
+        final multiplier = widget.isFromHistory ? 1.0 : widget.servingsMap[name] ?? 1.0;
         final filtered = <String, double>{};
         selectedMap.forEach((key, value) {
-          if (averageDailyRequirements.containsKey(key)) {
-            filtered[key] = value;
-          }
+          filtered[key] = value * multiplier;
         });
         _displayedNutrients = filtered;
       }
     });
   }
 
+
   void _saveMeal() {
     if (_isSaved) return;
     final dataManager = Provider.of<DataManager>(context, listen: false);
     final date = widget.selectedDate ?? DateTime.now();
 
-    if (widget.sourceMeal != null) {
-      dataManager.deleteMeal(widget.sourceMeal!, date);
-    }
+    // ✅ 기존 식단 이미지 기준으로 삭제
+    dataManager.deleteMealByImagePath(date, widget.imagePath);
+
+    final scaledNutrients = <String, Map<String, double>>{};
+    widget.nutrients.forEach((food, nutrientMap) {
+      final serving = widget.servingsMap[food] ?? 1.0;
+      scaledNutrients[food] = {
+        for (final entry in nutrientMap.entries)
+          entry.key: entry.value * serving,
+      };
+    });
 
     dataManager.addMeal(
       date,
       File(widget.imagePath),
-      widget.nutrients,
+      scaledNutrients,
       widget.mealNames,
+      widget.servingsMap,
     );
 
     setState(() => _isSaved = true);
@@ -102,6 +134,8 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
       SnackBar(content: Text('식단이 저장되었습니다.')),
     );
   }
+
+
 
   void _goBack() => Navigator.pop(context);
 
@@ -164,7 +198,7 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
                   builder: (context) => DietRecognitionPage(
                     image: File(widget.imagePath),
                     selectedDate: widget.selectedDate,
-                    sourceMeal: widget.sourceMeal, // ✅ 추가됨
+                    sourceMeal: widget.sourceMeal,
                   ),
                 ),
               );
@@ -214,12 +248,15 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8,
-                    children: widget.mealNames.map((name) => ChoiceChip(
-                      label: Text(name),
-                      selected: _selectedFood == name,
-                      onSelected: (_) => _toggleFood(name),
-                      selectedColor: Colors.green[200],
-                    )).toList(),
+                    children: widget.mealNames.map((name) {
+                      final serving = widget.servingsMap[name] ?? 1.0;
+                      return ChoiceChip(
+                        label: Text("$name (${serving.toStringAsFixed(1)}인분)"),
+                        selected: _selectedFood == name,
+                        onSelected: (_) => _toggleFood(name),
+                        selectedColor: Colors.green[200],
+                      );
+                    }).toList(),
                   ),
                   const SizedBox(height: 20),
                   Column(

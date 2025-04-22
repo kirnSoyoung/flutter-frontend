@@ -147,10 +147,11 @@ class _ProfilePageState extends State<ProfilePage> {
         children: [
           _buildInfoRow("키", "${currentUser!.height.toStringAsFixed(1)} cm"),
           _buildInfoRow("몸무게", "${currentUser!.weight.toStringAsFixed(1)} kg"),
-          _buildInfoRow("목표 섭취 칼로리", "${_calculateTargetCalories(currentUser!)} kcal"), // ✅ 목표 칼로리 추가
+          _buildInfoRow("목표 섭취 칼로리", "${_calculateTargetCalories(currentUser!)} kcal"),
           _buildInfoRow("성별", currentUser!.gender),
           _buildInfoRow("나이", "${currentUser!.age}세"),
           _buildInfoRow("활동량", currentUser!.activityLevel),
+          _buildInfoRow("기본 인분 수", "${currentUser!.servingSize.toStringAsFixed(1)} 인분"),
         ],
       ),
     );

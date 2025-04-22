@@ -2,13 +2,15 @@ import 'dart:io';
 
 class Meal {
   final File image;
-  final Map<String, Map<String, double>> nutrients; // ✅ 음식별 영양소 저장 구조
+  final Map<String, Map<String, double>> nutrients;
   final List<String> mealNames;
+  final Map<String, double> servings;
 
   Meal({
     required this.image,
     required this.nutrients,
     required this.mealNames,
+    required this.servings,
   });
 
   Map<String, dynamic> toJson() {
@@ -19,6 +21,7 @@ class Meal {
         nutrientMap.map((k, v) => MapEntry(k, v)),
       )),
       'mealNames': mealNames,
+      'servings': servings,
     };
   }
 
@@ -29,10 +32,13 @@ class Meal {
       Map<String, double>.from(Map<String, dynamic>.from(nutrientMap)),
     ));
 
+    final parsedServings = Map<String, double>.from(json['servings'] ?? {});
+
     return Meal(
       image: File(json['imagePath']),
       nutrients: parsedNutrients,
       mealNames: List<String>.from(json['mealNames'] ?? []),
+      servings: parsedServings,
     );
   }
 }

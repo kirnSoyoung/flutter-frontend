@@ -15,6 +15,7 @@ class _SignupPageState extends State<SignupPage> {
   final TextEditingController ageController = TextEditingController();
   final TextEditingController heightController = TextEditingController();
   final TextEditingController weightController = TextEditingController();
+  final TextEditingController servingController = TextEditingController();
 
   String selectedGender = "남성";
   String activityLevel = "보통";
@@ -228,6 +229,14 @@ class _SignupPageState extends State<SignupPage> {
             fontWeight: FontWeight.bold,
             color: Colors.black87,
           ),
+        ),
+        SizedBox(height: 20),
+        _buildInputField(
+          controller: servingController,
+          label: "기본 인분 수",
+          hint: "예: 1.0",
+          icon: Icons.dining,
+          keyboardType: TextInputType.numberWithOptions(decimal: true),
         ),
         SizedBox(height: 16),
         ...activityLevels.entries.map((entry) => _buildActivityOption(entry.key, entry.value)).toList(),
@@ -456,6 +465,8 @@ class _SignupPageState extends State<SignupPage> {
         height: double.parse(heightController.text),
         weight: double.parse(weightController.text),
         activityLevel: activityLevel,
+        servingSize: double.tryParse(servingController.text) ?? 1.0, // ✅ 추가
+
       );
 
       List<User> users = await SharedPrefs.getUsers();

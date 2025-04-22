@@ -56,7 +56,7 @@ class _HistoryPageState extends State<HistoryPage> {
     });
   }
 
-  Map<String, double> calculateDailyIntake(List meals) {
+  Map<String, double> calculateDailyIntake(List<Meal> meals) {
     final intake = <String, double>{};
     for (var key in averageDailyRequirements.keys) {
       intake[key] = 0.0;
@@ -67,13 +67,15 @@ class _HistoryPageState extends State<HistoryPage> {
         nutrientMap.forEach((key, value) {
           final normalized = normalizeNutrientKey(key);
           if (intake.containsKey(normalized)) {
-            intake[normalized] = intake[normalized]! + value;
+            intake[normalized] = intake[normalized]! + value; // ✅ 곱하기 제거
           }
         });
       });
     }
+
     return intake;
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -209,7 +211,8 @@ class _HistoryPageState extends State<HistoryPage> {
                                   selectedDate: _selectedDate!,
                                   mealNames: meal.mealNames,
                                   isFromHistory: true,
-                                  sourceMeal: meal, // ✅ 추가됨
+                                  sourceMeal: meal,
+                                  servingsMap: meal.servings,
                                 ),
                               ),
                             );

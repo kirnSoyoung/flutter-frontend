@@ -9,6 +9,7 @@ import '../utils/file_manager.dart';
 import '../utils/food_list.dart';
 import '../utils/api_service.dart';
 import '../utils/nutrient_utils.dart';
+import '../utils/shared_prefs.dart';
 import 'nutrition_result_page.dart';
 
 class RecognizedFood {
@@ -20,7 +21,7 @@ class RecognizedFood {
 class DietRecognitionPage extends StatefulWidget {
   final File image;
   final DateTime? selectedDate;
-  final Meal? sourceMeal; // ✅ 추가됨
+  final Meal? sourceMeal;
 
   const DietRecognitionPage({
     required this.image,
@@ -39,6 +40,7 @@ class _DietRecognitionPageState extends State<DietRecognitionPage> {
   TextEditingController searchController = TextEditingController();
   String? selectedImagePath;
   bool isUploading = true;
+  Map<String, double> servings = {};
 
   @override
   void initState() {
@@ -46,6 +48,20 @@ class _DietRecognitionPageState extends State<DietRecognitionPage> {
     _saveMealImage(widget.image);
     _uploadAndAnalyzeImage(widget.image);
     _loadFoodList();
+    _loadDefaultServing();
+  }
+
+  Future<void> _loadDefaultServing() async {
+    final user = await SharedPrefs.getLoggedInUser();
+    final defaultServing = user?.servingSize ?? 1.0;
+
+    if (widget.sourceMeal != null && widget.sourceMeal!.servings.isNotEmpty) {
+      servings = widget.sourceMeal!.servings;
+    } else {
+      servings = { for (var food in selectedFoods) food: defaultServing };
+    }
+
+    setState(() {});
   }
 
   Future<void> _loadFoodList() async {
@@ -68,12 +84,16 @@ class _DietRecognitionPageState extends State<DietRecognitionPage> {
       if (response != null && response['message'] == "Complete") {
         List<dynamic> yoloList = response['yolo_result'];
 
-        recognizedFoods = yoloList.map((item) => RecognizedFood(
-          item['label_kor'],
-          (item['confidence'] as num).toDouble(),
-        )).toList();
+        recognizedFoods = yoloList.map((item) {
+          final label = item['label_kor'];
+          return RecognizedFood(label, (item['confidence'] as num).toDouble());
+        }).toList();
 
         selectedFoods = recognizedFoods.map((f) => f.label).toList();
+
+        final user = await SharedPrefs.getLoggedInUser();
+        final defaultServing = user?.servingSize ?? 1.0;
+        servings = { for (var food in selectedFoods) food: defaultServing };
       }
     } catch (e) {
       print("❌ 인식 실패: $e");
@@ -86,21 +106,20 @@ class _DietRecognitionPageState extends State<DietRecognitionPage> {
 
     for (String food in selectedFoods) {
       final nutrients = await ApiService.fetchNutrientsByName(food);
+      print("📡 $food → API nutrients: $nutrients");
+
       if (nutrients != null) {
         final normalized = <String, double>{};
-
         nutrients.forEach((label, value) {
-          final normLabel = normalizeNutrientKey(label); // label 정규화 (e.g. "비타민C (mg)" → "비타민C")
-          final normValue = normalizeToMg(label, value); // value 정규화 (e.g. 1000000 → 100)
+          final normLabel = normalizeNutrientKey(label);
+          final normValue = normalizeToMg(label, value);
           normalized[normLabel] = normValue;
         });
-
-        result[food] = normalized; // ✅ 여기서부터는 정규화된 key/value만 사용!
+        result[food] = normalized;
       }
     }
     return result;
   }
-
 
   Future<void> proceedToAnalysis() async {
     final dataManager = Provider.of<DataManager>(context, listen: false);
@@ -108,6 +127,10 @@ class _DietRecognitionPageState extends State<DietRecognitionPage> {
     if (selectedImagePath == null || selectedFoods.isEmpty) return;
 
     final nutrientsByFood = await fetchIndividualNutrients();
+
+    final filteredServings = {
+      for (final food in selectedFoods) food: servings[food] ?? 1.0
+    };
 
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(
@@ -117,7 +140,8 @@ class _DietRecognitionPageState extends State<DietRecognitionPage> {
           selectedDate: mealDate,
           mealNames: selectedFoods,
           isFromHistory: false,
-          sourceMeal: widget.sourceMeal, // ✅ 전달됨!
+          sourceMeal: null,
+          servingsMap: filteredServings,
         ),
       ),
           (route) => route.isFirst,
@@ -137,8 +161,7 @@ class _DietRecognitionPageState extends State<DietRecognitionPage> {
 
   List<String> getFilteredSuggestions(String query) {
     return mealOptions
-        .where((option) =>
-    option.contains(query) && !selectedFoods.contains(option))
+        .where((option) => option.contains(query) && !selectedFoods.contains(option))
         .toList();
   }
 
@@ -207,14 +230,54 @@ class _DietRecognitionPageState extends State<DietRecognitionPage> {
                 ),
               ),
             SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              children: selectedFoods.map((label) => Chip(
-                label: Text(label),
-                deleteIcon: Icon(Icons.close),
-                onDeleted: () => setState(() => selectedFoods.remove(label)),
-              )).toList(),
+
+            Column(
+              children: selectedFoods.map((label) {
+                final currentServing = servings[label] ?? 1.0;
+                return Container(
+                  margin: EdgeInsets.only(bottom: 12),
+                  padding: EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey[300]!),
+                  ),
+                  child: Stack(
+                    children: [
+                      Positioned(
+                        top: 0,
+                        right: 0,
+                        child: GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              selectedFoods.remove(label);
+                              servings.remove(label);
+                            });
+                          },
+                          child: Icon(Icons.close, size: 20, color: Colors.grey),
+                        ),
+                      ),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(label, style: TextStyle(fontWeight: FontWeight.bold)),
+                          Slider(
+                            value: currentServing,
+                            onChanged: (value) => setState(() => servings[label] = value),
+                            min: 0.5,
+                            max: 5.0,
+                            divisions: 9,
+                            label: "${currentServing.toStringAsFixed(1)} 인분",
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
             ),
+
+
             SizedBox(height: 20),
             SizedBox(
               width: double.infinity,

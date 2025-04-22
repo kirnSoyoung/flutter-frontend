@@ -17,12 +17,12 @@ class ApiService {
         final decodedBody = utf8.decode(response.bodyBytes);
         final data = jsonDecode(decodedBody);
 
-        // print("🔥 서버 응답 데이터: $data");
-
+        // 🔍 응답 구조: { nutrients: [ { name: ..., value: ... }, ... ] }
+        final nutrientsList = data['nutrients'];
         final result = <String, double>{};
 
-        if (data is List) {
-          for (var item in data) {
+        if (nutrientsList is List) {
+          for (var item in nutrientsList) {
             if (item is Map && item.containsKey('name') && item.containsKey('value')) {
               final name = item['name'].toString();
               final rawValue = item['value'];
@@ -33,16 +33,9 @@ class ApiService {
               }
             }
           }
-        } else if (data is Map<String, dynamic>) {
-          data.forEach((key, value) {
-            final parsed = double.tryParse(value.toString());
-            if (parsed != null) {
-              result[key] = parsed;
-            }
-          });
         }
 
-        // print("🔥 파싱된 결과: $result");
+        print("📡 $foodName → API nutrients: $result");
         return result;
       }
     } catch (e) {
@@ -52,6 +45,7 @@ class ApiService {
     print("⚠️ API 실패 또는 데이터 없음. 임시 testNutrients 사용");
     return testNutrients;
   }
+
 
   static Future<List<Map<String, String>>> fetchSupplements(String nutrient) async {
     try {

@@ -13,15 +13,22 @@ class DataManager extends ChangeNotifier {
     return _mealRecords[normalizedDate];
   }
 
-  void addMeal(DateTime date, File image, Map<String, Map<String, double>> perFoodNutrients, List<String> mealNames) {
+  void addMeal(
+      DateTime date,
+      File image,
+      Map<String, Map<String, double>> perFoodNutrients,
+      List<String> mealNames,
+      Map<String, double> servings,
+      ) {
     DateTime normalizedDate = DateTime(date.year, date.month, date.day);
     _mealRecords[normalizedDate] ??= [];
 
     _mealRecords[normalizedDate]!.add(
       Meal(
         image: image,
-        nutrients: perFoodNutrients, // ✅ 전체 합산이 아닌 음식별 Map 저장
+        nutrients: perFoodNutrients,
         mealNames: mealNames,
+        servings: servings,
       ),
     );
 
@@ -31,13 +38,7 @@ class DataManager extends ChangeNotifier {
 
   void deleteMealByImagePath(DateTime date, String imagePath) {
     DateTime normalizedDate = DateTime(date.year, date.month, date.day);
-    print("🗑️ 삭제 시도: $normalizedDate, path: $imagePath");
-
     if (_mealRecords.containsKey(normalizedDate)) {
-      _mealRecords[normalizedDate]!.forEach((meal) {
-        print("🔍 비교 대상 path: ${meal.image.path}");
-      });
-
       _mealRecords[normalizedDate]!.removeWhere(
             (meal) => meal.image.path.trim() == imagePath.trim(),
       );
@@ -53,13 +54,7 @@ class DataManager extends ChangeNotifier {
 
   void deleteMeal(Meal target, DateTime date) {
     DateTime normalizedDate = DateTime(date.year, date.month, date.day);
-    print("🗑️ 삭제 시도 (Meal): $normalizedDate, path: ${target.image.path}");
-
     if (_mealRecords.containsKey(normalizedDate)) {
-      _mealRecords[normalizedDate]!.forEach((meal) {
-        print("🔍 비교 대상: ${meal.image.path} / ${meal.mealNames}");
-      });
-
       _mealRecords[normalizedDate]!.removeWhere((meal) =>
       meal.image.path.trim() == target.image.path.trim() &&
           meal.mealNames.toString() == target.mealNames.toString()
@@ -73,7 +68,6 @@ class DataManager extends ChangeNotifier {
       notifyListeners();
     }
   }
-
 
   void saveMeals() {
     SharedPrefs.saveMeals(_mealRecords);

@@ -67,7 +67,10 @@ class SharedPrefs {
           .toList();
     }
 
-    users.add(user);
+    // 기존 동일 이메일 사용자 제거
+    users.removeWhere((u) => u.email == user.email);
+
+    users.add(user); // 업데이트된 사용자 추가
 
     await prefs.setString("users", jsonEncode(users.map((u) => u.toJson()).toList()));
   }
@@ -97,6 +100,7 @@ class SharedPrefs {
         height: 0,
         weight: 0,
         activityLevel: "",
+        servingSize: 0.0,
       ),
     );
   }
@@ -115,4 +119,11 @@ class SharedPrefs {
     await prefs.remove('meal_records'); // 우리가 저장했던 키
     print('✅ 모든 저장된 식단 데이터를 삭제했습니다.');
   }
+
+  static Future<void> saveLoggedInUser(User user) async {
+    final prefs = await SharedPreferences.getInstance();
+    prefs.setString('loggedInUserEmail', user.email);
+    prefs.setString('loggedInUser', jsonEncode(user.toJson())); // ✅ 유저 정보를 통째로 저장
+  }
+
 }

@@ -18,6 +18,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
   late TextEditingController ageController;
   late TextEditingController heightController;
   late TextEditingController weightController;
+  late TextEditingController servingController;
   late String selectedGender;
   late String activityLevel;
 
@@ -29,6 +30,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     ageController = TextEditingController(text: widget.user.age.toString());
     heightController = TextEditingController(text: widget.user.height.toString());
     weightController = TextEditingController(text: widget.user.weight.toString());
+    servingController = TextEditingController(text: widget.user.servingSize.toString());
   }
 
   Future<void> _saveUserData() async {
@@ -40,8 +42,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
       height: double.tryParse(heightController.text) ?? 170.0,
       weight: double.tryParse(weightController.text) ?? 60.0,
       activityLevel: activityLevel,
+      servingSize: double.tryParse(servingController.text) ?? 1.0, // ✅ 추가
     );
     await SharedPrefs.saveUser(updatedUser);
+    await SharedPrefs.saveLoggedInUser(updatedUser); // ✅ 현재 로그인 정보도 갱신
+
     if (context.mounted) {
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -134,6 +139,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
                         "높음": "활동량: 높음 (주 3회 이상 운동)"
                       },
                       onChanged: (value) => setState(() => activityLevel = value!),
+                    ),
+                    const SizedBox(height: 16),
+                    CustomInputField(
+                      label: "기본 인분 수",
+                      controller: servingController,
+                      keyboardType: TextInputType.numberWithOptions(decimal: true),
                     ),
                   ],
                 ),
