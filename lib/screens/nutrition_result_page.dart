@@ -7,8 +7,7 @@ import '../models/meal_model.dart';
 import '../utils/data_manager.dart';
 import '../utils/nutrition_standards.dart';
 import '../utils/nutrient_utils.dart';
-import '../widgets/nutrient_gauge.dart';
-import '../widgets/nutrient_box.dart';
+import '../utils/api_service.dart';
 import '../widgets/box_section.dart';
 
 import 'diet_recognition_page.dart';
@@ -83,7 +82,6 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
     });
   }
 
-
   void _toggleFood(String name) {
     setState(() {
       if (_selectedFood == name) {
@@ -107,21 +105,30 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
     });
   }
 
-
-  void _saveMeal() {
+  void _saveMeal() async {
     if (_isSaved) return;
     final dataManager = Provider.of<DataManager>(context, listen: false);
     final date = widget.selectedDate ?? DateTime.now();
 
+    // 로컬 저장
     dataManager.deleteMealByImagePath(date, widget.imagePath);
 
     final scaledNutrients = <String, Map<String, double>>{};
+    final totalNutrients = <String, double>{};
+
     widget.nutrients.forEach((food, nutrientMap) {
       final serving = widget.servingsMap[food] ?? 1.0;
+
+      // 개별 음식의 영양소를 인분에 맞게 스케일링
       scaledNutrients[food] = {
         for (final entry in nutrientMap.entries)
           entry.key: entry.value * serving,
       };
+
+      // 전체 영양소 합산
+      nutrientMap.forEach((key, value) {
+        totalNutrients[key] = (totalNutrients[key] ?? 0.0) + (value * serving);
+      });
     });
 
     dataManager.addMeal(
@@ -132,17 +139,21 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
       widget.servingsMap,
     );
 
-    setState(() => _isSaved = true);
+    final String dateOnly = date.toIso8601String().split('T')[0];
+
+    // ✅ 서버로 전송
+    final success = await ApiService.saveUserNutrients(totalNutrients, dateOnly);
+
+    setState(() => _isSaved = success);
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('식단이 저장되었습니다.')),
+      SnackBar(content: Text(success ? '식단이 저장되었습니다.' : '식단 저장에 실패했습니다.')),
     );
   }
 
 
-
   void _goBack() => Navigator.pop(context);
 
-  void _deleteMeal() {
+  void _deleteMeal() async {
     final dataManager = Provider.of<DataManager>(context, listen: false);
     DateTime mealDate = widget.selectedDate ?? DateTime.now();
 
@@ -157,7 +168,18 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
             child: Text("취소"),
           ),
           TextButton(
-            onPressed: () {
+            onPressed: () async {
+              final totalNutrients = <String, double>{};
+              widget.nutrients.forEach((food, nutrientMap) {
+                final serving = widget.servingsMap[food] ?? 1.0;
+                nutrientMap.forEach((key, value) {
+                  totalNutrients[key] = (totalNutrients[key] ?? 0.0) + (value * serving);
+                });
+              });
+
+              final String dateOnly = mealDate.toIso8601String().split('T')[0];
+              await ApiService.deleteUserNutrients(dateOnly);
+
               dataManager.deleteMealByImagePath(mealDate, widget.imagePath);
               Navigator.pop(context);
               _goBack();

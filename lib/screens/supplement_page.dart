@@ -1,8 +1,5 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 
 import '../theme/app_theme.dart';
@@ -11,19 +8,19 @@ import '../utils/api_service.dart';
 
 const List<Map<String, String>> dummySupplements = [
   {
-    "name": "테스트 영양제 A",
-    "image": "https://via.placeholder.com/100",
-    "url": "https://example.com/supplementA",
+    'name': '테스트 영양제 A',
+    'image': 'https://via.placeholder.com/100',
+    'url': 'https://example.com/supplementA',
   },
   {
-    "name": "테스트 영양제 B",
-    "image": "https://via.placeholder.com/100",
-    "url": "https://example.com/supplementB",
+    'name': '테스트 영양제 B',
+    'image': 'https://via.placeholder.com/100',
+    'url': 'https://example.com/supplementB',
   },
   {
-    "name": "테스트 영양제 C",
-    "image": "https://via.placeholder.com/100",
-    "url": "https://example.com/supplementC",
+    'name': '테스트 영양제 C',
+    'image': 'https://via.placeholder.com/100',
+    'url': 'https://example.com/supplementC',
   },
 ];
 
@@ -48,33 +45,31 @@ class _SupplementPageState extends State<SupplementPage> {
     final now = DateTime.now();
     final lastWeek = now.subtract(Duration(days: 7));
 
-    Map<String, double> totalNutrients = {};
-
+    Map<String, double> total = {};
     for (int i = 0; i < 7; i++) {
       final date = lastWeek.add(Duration(days: i));
       final meals = dataManager.getMealsForDate(date) ?? [];
-
       for (var meal in meals) {
         meal.nutrients.forEach((food, nutrientMap) {
           nutrientMap.forEach((nutrient, value) {
-            totalNutrients[nutrient] = (totalNutrients[nutrient] ?? 0) + value;
+            total[nutrient] = (total[nutrient] ?? 0) + value;
           });
         });
       }
     }
 
-    final standards = {
-      "비타민 C": 100.0,
-      "철분": 18.0,
-      "칼슘": 1000.0,
-      "마그네슘": 400.0,
-      "비타민 D": 15.0,
+    const standards = {
+      '비타민 C': 100.0,
+      '철분': 18.0,
+      '칼슘': 1000.0,
+      '마그네슘': 400.0,
+      '비타민 D': 15.0,
     };
 
-    Map<String, double> deficiencies = {};
-    standards.forEach((key, standard) {
-      final consumed = totalNutrients[key] ?? 0;
-      deficiencies[key] = (standard - consumed).clamp(0.0, double.infinity);
+    final deficiencies = <String, double>{};
+    standards.forEach((k, std) {
+      final consumed = total[k] ?? 0;
+      deficiencies[k] = (std - consumed).clamp(0.0, double.infinity);
     });
 
     final sorted = deficiencies.entries.toList()
@@ -85,42 +80,17 @@ class _SupplementPageState extends State<SupplementPage> {
     });
   }
 
-  Future<List<Map<String, String>>> fetchSupplementsFromServer(String nutrient) async {
-    try {
-      final response = await http.get(Uri.parse(
-        "http://54.253.61.191:8000//supplements?nutrient=${Uri.encodeComponent(nutrient)}",
-      ));
-
-      if (response.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(response.body);
-        return data.map<Map<String, String>>((item) => {
-          "name": item['name'],
-          "image": item['image'],
-          "url": item['url'],
-        }).toList();
-      } else {
-        print("❌ 서버 응답 오류: ${response.statusCode}");
-      }
-    } catch (e) {
-      print("❌ 영양제 API 호출 오류: $e");
-    }
-
-    return [];
-  }
-
   void _openSupplementPage(String url) async {
     if (await canLaunchUrl(Uri.parse(url))) {
       await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-    } else {
-      print("❌ URL 열기 실패: $url");
     }
   }
 
   Widget _buildSupplementSection(String nutrient) {
     return FutureBuilder<List<Map<String, String>>>(
-      future: fetchSupplementsFromServer(nutrient),
+      future: ApiService.fetchSupplements(nutrient),
       builder: (context, snapshot) {
-        bool hasData = snapshot.hasData && snapshot.data!.isNotEmpty;
+        final hasData = snapshot.hasData && snapshot.data!.isNotEmpty;
         final supplements = hasData ? snapshot.data! : dummySupplements;
 
         return Container(
@@ -129,58 +99,30 @@ class _SupplementPageState extends State<SupplementPage> {
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black12,
-                blurRadius: 6,
-                offset: Offset(0, 2),
-              ),
-            ],
+            boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 2))],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                nutrient,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black87,
-                ),
-              ),
+              Text(nutrient, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
               SizedBox(height: 12),
               Row(
-                children: supplements.map((supplement) {
+                children: supplements.map((supp) {
                   return GestureDetector(
-                    onTap: () {
-                      if (hasData) {
-                        _openSupplementPage(supplement["url"]!);
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text("URL이 아직 준비되지 않았습니다.")),
-                        );
-                      }
-                    },
+                    onTap: () => _openSupplementPage(supp['url']!),
                     child: Container(
                       width: 100,
                       margin: EdgeInsets.only(right: 12),
                       child: Column(
                         children: [
-                          if (supplement["image"] != null &&
-                              supplement["image"]!.startsWith("http"))
+                          if (supp['image']!.startsWith('http'))
                             ClipRRect(
                               borderRadius: BorderRadius.circular(8),
-                              child: Image.network(
-                                supplement["image"]!,
-                                width: 100,
-                                height: 100,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) => SizedBox.shrink(),
-                              ),
+                              child: Image.network(supp['image']!, width: 100, height: 100, fit: BoxFit.cover),
                             ),
                           SizedBox(height: 8),
                           Text(
-                            supplement["name"]!,
+                            supp['name']!,
                             textAlign: TextAlign.center,
                             style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
                             maxLines: 2,
@@ -205,9 +147,8 @@ class _SupplementPageState extends State<SupplementPage> {
       backgroundColor: AppTheme.backgroundColor,
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+          padding: EdgeInsets.symmetric(horizontal: 20, vertical: 24),
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Container(
                 padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
@@ -220,14 +161,7 @@ class _SupplementPageState extends State<SupplementPage> {
                   children: [
                     Icon(Icons.medical_services, color: AppTheme.primaryColor),
                     SizedBox(width: 8),
-                    Text(
-                      "영양제 추천",
-                      style: TextStyle(
-                        color: AppTheme.primaryColor,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                    Text("영양제 추천", style: TextStyle(color: AppTheme.primaryColor, fontSize: 20, fontWeight: FontWeight.bold)),
                   ],
                 ),
               ),
@@ -235,11 +169,7 @@ class _SupplementPageState extends State<SupplementPage> {
               Expanded(
                 child: topDeficiencies.isEmpty
                     ? Center(child: Text("최근 일주일간 분석할 식단이 없습니다."))
-                    : ListView(
-                  children: topDeficiencies
-                      .map((nutrient) => _buildSupplementSection(nutrient))
-                      .toList(),
-                ),
+                    : ListView(children: topDeficiencies.map(_buildSupplementSection).toList()),
               ),
             ],
           ),
