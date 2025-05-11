@@ -8,6 +8,14 @@ import '../utils/test_nutrients.dart';
 class ApiService {
   static const String baseUrl = "http://54.253.61.191:8000";
 
+  static const List<String> nutrDb = [
+    '에너지', '탄수화물', '식이섬유', '단백질', '리놀레산', '알파-리놀렌산', 'EPA+DHA',
+    '메티오닌', '류신', '이소류신', '발린', '라이신', '페닐알라닌+티로신', '트레오닌', '트립토판', '히스티딘',
+    '비타민A', '비타민D', '비타민E', '비타민K', '비타민C', '비타민B1', '비타민B2', '나이아신', '비타민B6',
+    '비타민B12', '엽산', '판토텐산', '비오틴', '칼슘', '인', '나트륨', '염소', '칼륨', '마그네슘', '철',
+    '아연', '구리', '망간', '요오드', '셀레늄', '몰리브덴', '크롬'
+  ];
+
   /// 음식 이름으로 영양소 조회
   static Future<Map<String, double>?> fetchNutrientsByName(String foodName) async {
     try {
@@ -46,13 +54,16 @@ class ApiService {
     try {
       final user = await SharedPrefs.getLoggedInUser();
       if (user == null) return false;
+
+      final nutrientsList = nutrDb.map((key) => nutrients[key] ?? 0.0).toList();
+
       final response = await http.post(
         Uri.parse("$baseUrl/database/user/save"),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'user_id': user.email,
           'date': date,
-          'nutrients': nutrients,
+          'nutrients': nutrientsList,
         }),
       );
       return response.statusCode == 200;
