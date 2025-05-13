@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import '../utils/nutrition_standards.dart';
 import '../utils/nutrient_utils.dart';
+import '../utils/shared_prefs.dart';
 import '../widgets/nutrient_gauge.dart';
 import '../widgets/nutrient_box.dart';
 
 class GroupedNutrientSection extends StatefulWidget {
   final Map<String, double> intakeMap;
+  final int daySpan;
 
-  const GroupedNutrientSection({super.key, required this.intakeMap});
+  const GroupedNutrientSection({super.key, required this.intakeMap, this.daySpan = 1});
 
   @override
   State<GroupedNutrientSection> createState() => _GroupedNutrientSectionState();
@@ -16,13 +18,13 @@ class GroupedNutrientSection extends StatefulWidget {
 class _GroupedNutrientSectionState extends State<GroupedNutrientSection> {
   final _scrollKey = GlobalKey();
   String? selectedGroup;
+  Map<String, double>? customRequirements;
 
   void _onGroupTap(String group) {
     setState(() {
       selectedGroup = selectedGroup == group ? null : group;
     });
 
-    // ✅ 직접 실행
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final context = _scrollKey.currentContext;
       if (context != null) {
@@ -36,8 +38,31 @@ class _GroupedNutrientSectionState extends State<GroupedNutrientSection> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    _loadUserRequirements();
+  }
+
+  Future<void> _loadUserRequirements() async {
+    final user = await SharedPrefs.getLoggedInUser();
+    if (user != null) {
+      setState(() {
+        customRequirements = calculatePersonalRequirements(user);
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final groupPercents = calculateGroupPercents(widget.intakeMap, averageDailyRequirements);
+    if (customRequirements == null) {
+      return Center(child: CircularProgressIndicator());
+    }
+
+    final adjustedRequirements = {
+      for (final entry in customRequirements!.entries)
+        entry.key: entry.value * widget.daySpan
+    };
+    final groupPercents = calculateGroupPercents(widget.intakeMap, adjustedRequirements);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -71,11 +96,14 @@ class _GroupedNutrientSectionState extends State<GroupedNutrientSection> {
                 const SizedBox(height: 12),
                 ...nutrientGroups[selectedGroup]!.map((nutrient) {
                   final value = widget.intakeMap[nutrient] ?? 0.0;
+                  final max = customRequirements?[nutrient] ?? 100.0;
                   return NutrientGauge(
                     label: nutrient,
                     currentValue: value,
+                    maxValue: max,
                     mealsPerDay: 3,
                     isDailyTotal: false,
+                    daySpan: widget.daySpan,
                   );
                 }).toList(),
               ],

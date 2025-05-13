@@ -1,4 +1,3 @@
-// ✅ 최종 수정된 main_page.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -6,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import '../utils/data_manager.dart';
 import '../utils/nutrition_standards.dart';
 import '../utils/nutrient_utils.dart';
+import '../utils/shared_prefs.dart';
 import '../widgets/image_picker_widget.dart';
 import '../widgets/nutrient_gauge.dart';
 import '../widgets/box_section.dart';
@@ -27,6 +27,7 @@ class _HomePageState extends State<HomePage> {
   final ScrollController _scrollController = ScrollController();
   bool showFab = false;
   bool showFabOptions = false;
+  Map<String, double>? _rdi;
 
   @override
   void initState() {
@@ -36,6 +37,16 @@ class _HomePageState extends State<HomePage> {
         showFab = _scrollController.offset > 300;
       });
     });
+    _loadUserRdi();
+  }
+
+  void _loadUserRdi() async {
+    final user = await SharedPrefs.getLoggedInUser();
+    if (user != null) {
+      setState(() {
+        _rdi = calculatePersonalRequirements(user);
+      });
+    }
   }
 
   void setImage(File image) {
@@ -60,8 +71,8 @@ class _HomePageState extends State<HomePage> {
         .toList();
   }
 
-  Map<String, double> sumNutrients(List<Meal> meals) {
-    final total = { for (var key in averageDailyRequirements.keys) key: 0.0 };
+  Map<String, double> sumNutrients(List<Meal> meals, Map<String, double> baseKeys) {
+    final total = { for (var key in baseKeys.keys) key: 0.0 };
 
     for (var meal in meals) {
       meal.nutrients.forEach((_, nutrientMap) {
@@ -104,6 +115,8 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    if (_rdi == null) return Center(child: CircularProgressIndicator());
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: Stack(
@@ -112,19 +125,24 @@ class _HomePageState extends State<HomePage> {
             builder: (context, dataManager, child) {
               final today = DateTime.now();
               late DateTime start, end;
+              int daySpan = 1;
+
               if (selectedPeriod == 'day') {
                 start = end = DateTime(today.year, today.month, today.day);
+                daySpan = 1;
               } else if (selectedPeriod == 'week') {
                 int weekday = today.weekday % 7;
                 start = today.subtract(Duration(days: weekday));
-                end = start.add(Duration(days: 5));
+                end = start.add(Duration(days: 6));
+                daySpan = 7;
               } else {
                 start = DateTime(today.year, today.month, 1);
                 end = DateTime(today.year, today.month + 1, 0);
+                daySpan = end.difference(start).inDays + 1;
               }
 
               final meals = getMealsInRange(dataManager.allMeals, start, end);
-              final intake = sumNutrients(meals);
+              final intake = sumNutrients(meals, _rdi!);
 
               return CustomScrollView(
                 controller: _scrollController,
@@ -214,7 +232,7 @@ class _HomePageState extends State<HomePage> {
                           SizedBox(height: 16),
                           Text("영양소 섭취량", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                           SizedBox(height: 16),
-                          GroupedNutrientSection(intakeMap: intake),
+                          GroupedNutrientSection(intakeMap: intake, daySpan: daySpan),
                         ],
                       ),
                     ),
@@ -304,7 +322,4 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
-
-
-
 }

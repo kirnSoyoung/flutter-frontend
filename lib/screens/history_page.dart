@@ -11,6 +11,7 @@ import '../screens/nutrition_result_page.dart';
 import '../utils/data_manager.dart';
 import '../utils/nutrition_standards.dart';
 import '../utils/nutrient_utils.dart';
+import '../utils/shared_prefs.dart';
 import '../widgets/nutrient_gauge.dart';
 import '../widgets/box_section.dart';
 import '../models/meal_model.dart';
@@ -23,6 +24,7 @@ class HistoryPage extends StatefulWidget {
 class _HistoryPageState extends State<HistoryPage> {
   DateTime _currentWeekStart = DateTime.now();
   DateTime? _selectedDate;
+  Map<String, double>? _rdi;
 
   @override
   void initState() {
@@ -30,6 +32,16 @@ class _HistoryPageState extends State<HistoryPage> {
     initializeDateFormatting('ko_KR');
     _currentWeekStart = _getWeekStart(DateTime.now());
     _selectedDate = DateTime.now();
+    _loadUserRdi();
+  }
+
+  void _loadUserRdi() async {
+    final user = await SharedPrefs.getLoggedInUser();
+    if (user != null) {
+      setState(() {
+        _rdi = calculatePersonalRequirements(user);
+      });
+    }
   }
 
   DateTime _getWeekStart(DateTime date) {
@@ -57,9 +69,9 @@ class _HistoryPageState extends State<HistoryPage> {
     });
   }
 
-  Map<String, double> calculateDailyIntake(List<Meal> meals) {
+  Map<String, double> calculateDailyIntake(List<Meal> meals, Map<String, double> baseKeys) {
     final intake = <String, double>{};
-    for (var key in averageDailyRequirements.keys) {
+    for (var key in baseKeys.keys) {
       intake[key] = 0.0;
     }
 
@@ -68,7 +80,7 @@ class _HistoryPageState extends State<HistoryPage> {
         nutrientMap.forEach((key, value) {
           final normalized = normalizeNutrientKey(key);
           if (intake.containsKey(normalized)) {
-            intake[normalized] = intake[normalized]! + value; // ✅ 곱하기 제거
+            intake[normalized] = intake[normalized]! + value;
           }
         });
       });
@@ -77,14 +89,15 @@ class _HistoryPageState extends State<HistoryPage> {
     return intake;
   }
 
-
   @override
   Widget build(BuildContext context) {
+    if (_rdi == null) return Center(child: CircularProgressIndicator());
+
     final dataManager = Provider.of<DataManager>(context);
     List<DateTime> weekDays = List.generate(
         7, (index) => _currentWeekStart.add(Duration(days: index)));
     final meals = dataManager.getMealsForDate(_selectedDate!) ?? [];
-    final dailyIntake = calculateDailyIntake(meals);
+    final dailyIntake = calculateDailyIntake(meals, _rdi!);
 
     return Scaffold(
       floatingActionButton: FloatingActionButton(
@@ -239,10 +252,9 @@ class _HistoryPageState extends State<HistoryPage> {
                       style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                     ),
                     const SizedBox(height: 10),
-                    GroupedNutrientSection(intakeMap: dailyIntake,),
+                    GroupedNutrientSection(intakeMap: dailyIntake),
                     const SizedBox(height: 80),
                   ],
-
                 ],
               ),
             ),

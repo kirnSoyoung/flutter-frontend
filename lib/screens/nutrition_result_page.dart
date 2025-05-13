@@ -244,10 +244,7 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
 
   @override
   Widget build(BuildContext context) {
-    final groupPercents = calculateGroupPercents(
-      _displayedNutrients,
-      averageDailyRequirements,
-    );
+    GroupedNutrientSection(intakeMap: _displayedNutrients);
 
     return Scaffold(
       appBar: AppBar(

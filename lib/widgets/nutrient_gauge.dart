@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../utils/nutrition_standards.dart';
 import '../utils/nutrient_utils.dart';
 import '../theme/app_theme.dart';
 
@@ -8,21 +7,22 @@ class NutrientGauge extends StatelessWidget {
   final double currentValue;
   final int mealsPerDay;
   final bool isDailyTotal;
+  final double maxValue;
+  final int daySpan; // ✅ 추가: 기간 (1, 7, 30)
 
   NutrientGauge({
     required this.label,
     required this.currentValue,
     required this.mealsPerDay,
     required this.isDailyTotal,
+    required this.maxValue,
+    this.daySpan = 1, // 기본값 하루
   });
 
   @override
   Widget build(BuildContext context) {
-    final String normLabel = _normalizeNutrient(label);
-    final double maxValue = averageDailyRequirements[normLabel] ?? 100;
-    final double percentage = ((currentValue / maxValue) * 100).clamp(0.0, 999.9);
-
-    // 섭취량 상태 결정
+    final double adjustedMax = maxValue * daySpan;
+    final double percentage = ((currentValue / adjustedMax) * 100).clamp(0.0, 999.9);
     NutrientStatus status = _getNutrientStatus(percentage);
 
     return Container(
@@ -34,7 +34,6 @@ class NutrientGauge extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // 영양소 아이콘
           Container(
             width: 50,
             height: 50,
@@ -56,7 +55,6 @@ class NutrientGauge extends StatelessWidget {
             ),
           ),
           SizedBox(width: 16),
-          // 영양소 정보
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
