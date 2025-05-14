@@ -121,11 +121,13 @@ class ApiService {
       if (user == null) return {};
 
       final response = await http.get(
-        Uri.parse("$baseUrl/supplements/recommend?user_id=${Uri.encodeComponent(user.email)}"),
+        Uri.parse("$baseUrl/supplements/recommend/${Uri.encodeComponent(user.email)}"),
       );
 
       if (response.statusCode == 200) {
-        final Map<String, dynamic> raw = jsonDecode(response.body);
+        final decoded = utf8.decode(response.bodyBytes);
+        final Map<String, dynamic> raw = jsonDecode(decoded);
+
         final result = <String, List<Map<String, dynamic>>>{};
 
         raw.forEach((category, items) {
