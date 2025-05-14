@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/user_model.dart';
 import '../theme/app_theme.dart';
 import '../utils/shared_prefs.dart';
+import '../utils/api_service.dart';
 import '../widgets/custom_dropdown.dart';
 import '../widgets/custom_input_field.dart';
 import '../widgets/custom_labeled_dropdown.dart';
@@ -42,10 +43,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
       height: double.tryParse(heightController.text) ?? 170.0,
       weight: double.tryParse(weightController.text) ?? 60.0,
       activityLevel: activityLevel,
-      servingSize: double.tryParse(servingController.text) ?? 1.0, // ✅ 추가
+      servingSize: double.tryParse(servingController.text) ?? 1.0,
     );
     await SharedPrefs.saveUser(updatedUser);
-    await SharedPrefs.saveLoggedInUser(updatedUser); // ✅ 현재 로그인 정보도 갱신
+    await SharedPrefs.saveLoggedInUser(updatedUser);
+    // ✅ 서버에 수정된 프로필 반영
+    await ApiService.saveUserProfile(updatedUser);
 
     if (context.mounted) {
       Navigator.pop(context);

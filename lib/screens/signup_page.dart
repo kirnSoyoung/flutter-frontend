@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/user_model.dart';
 import '../utils/shared_prefs.dart';
+import '../utils/api_service.dart';
 import '../theme/app_theme.dart';
 import 'login_page.dart';
 
@@ -476,6 +477,7 @@ class _SignupPageState extends State<SignupPage> {
       }
 
       await SharedPrefs.saveUser(newUser);
+      await ApiService.saveUserProfile(newUser);
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(
           builder: (context) => LoginPage(),

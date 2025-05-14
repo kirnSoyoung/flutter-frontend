@@ -1,4 +1,4 @@
-// lib/utils/api_service.dart
+import '../models/user_model.dart';
 
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -49,7 +49,7 @@ class ApiService {
     return testNutrients;
   }
 
-  /// 사용자별 영양소 저장 (새로 추가)
+  /// 사용자별 영양소 저장
   static Future<bool> saveUserNutrients(Map<String, double> nutrients, String date) async {
     try {
       final user = await SharedPrefs.getLoggedInUser();
@@ -73,7 +73,7 @@ class ApiService {
     }
   }
 
-  /// 사용자별 영양소 삭제 (새로 추가)
+  /// 사용자별 영양소 삭제
   static Future<bool> deleteUserNutrients(String date) async {
     try {
       final user = await SharedPrefs.getLoggedInUser();
@@ -90,23 +90,59 @@ class ApiService {
     }
   }
 
-  /// 영양제 추천 목록 조회
-  static Future<List<Map<String, String>>> fetchSupplements(String nutrient) async {
+  static Future<bool> saveUserProfile(User user) async {
     try {
-      final response = await http.get(
-        Uri.parse("$baseUrl/supplements?nutrient=${Uri.encodeComponent(nutrient)}"),
+      final response = await http.post(
+        Uri.parse("$baseUrl/database/user/profile"),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'user_id': user.email,
+          'age': user.age,
+          'height': user.height,
+          'weight': user.weight,
+          'gender': user.gender,
+          'activity_level': user.activityLevel,
+        }),
       );
+
+      return response.statusCode == 200;
+    } catch (e) {
+      print("❌ saveUserProfile 예외 발생: $e");
+      return false;
+    }
+  }
+
+
+
+  /// 영양제 추천 받아오기
+  static Future<Map<String, List<Map<String, dynamic>>>> getRecommendedSupplements() async {
+    try {
+      final user = await SharedPrefs.getLoggedInUser();
+      if (user == null) return {};
+
+      final response = await http.get(
+        Uri.parse("$baseUrl/supplements/recommend?user_id=${Uri.encodeComponent(user.email)}"),
+      );
+
       if (response.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(response.body);
-        return data.map<Map<String, String>>((item) => {
-          'name': item['name'],
-          'image': item['image'],
-          'url': item['url'],
-        }).toList();
+        final Map<String, dynamic> raw = jsonDecode(response.body);
+        final result = <String, List<Map<String, dynamic>>>{};
+
+        raw.forEach((category, items) {
+          result[category] = (items as List)
+              .whereType<Map>()
+              .map((e) => e.cast<String, dynamic>())
+              .toList();
+        });
+
+        return result;
+      } else {
+        print("❌ 추천 실패: ${response.statusCode}");
       }
     } catch (e) {
-      print("❌ fetchSupplements 예외 발생: $e");
+      print("❌ getRecommendedSupplements 예외: $e");
     }
-    return [];
+    return {};
   }
+
 }
