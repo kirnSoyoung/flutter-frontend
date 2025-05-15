@@ -10,7 +10,7 @@ import '../utils/food_list.dart';
 import '../utils/api_service.dart';
 import '../utils/nutrient_utils.dart';
 import '../utils/shared_prefs.dart';
-import 'nutrition_result_page.dart';
+import 'result_page.dart';
 
 class RecognizedFood {
   final String label;

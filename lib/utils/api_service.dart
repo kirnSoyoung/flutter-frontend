@@ -51,7 +51,7 @@ class ApiService {
 
   /// 사용자별 영양소 저장
   static Future<bool> saveUserNutrients(Map<String, double> nutrients, String date) async {
-    try {
+
       final user = await SharedPrefs.getLoggedInUser();
       if (user == null) return false;
 
@@ -66,11 +66,14 @@ class ApiService {
           'nutrients': nutrientsList,
         }),
       );
-      return response.statusCode == 200;
-    } catch (e) {
-      print("❌ saveUserNutrients 예외 발생: $e");
-      return false;
-    }
+
+      if (response.statusCode != 404) {
+        print("✅ 사용자 영양소 서버 저장 성공 (status: ${response.statusCode})");
+        return true;
+      } else {
+        print("❌ 사용자 영양소 서버 저장 실패 (404 Not Found)");
+        return false;
+      }
   }
 
   /// 사용자별 영양소 삭제

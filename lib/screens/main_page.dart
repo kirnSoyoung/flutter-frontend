@@ -10,8 +10,8 @@ import '../widgets/image_picker_widget.dart';
 import '../widgets/nutrient_gauge.dart';
 import '../widgets/box_section.dart';
 import '../theme/app_theme.dart';
-import 'diet_recognition_page.dart';
-import 'nutrition_result_page.dart';
+import 'recognition_page.dart';
+import 'result_page.dart';
 import '../models/meal_model.dart';
 
 class HomePage extends StatefulWidget {

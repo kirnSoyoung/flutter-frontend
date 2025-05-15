@@ -6,13 +6,13 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
-import '../screens/diet_recognition_page.dart';
+import '../screens/recognition_page.dart';
+import '../screens/result_page.dart';
 import '../utils/data_manager.dart';
 import '../utils/nutrient_utils.dart';
 import '../utils/shared_prefs.dart';
 import '../utils/nutrition_standards.dart';
 import '../models/meal_model.dart';
-import '../models/user_model.dart';
 
 class HistoryPage extends StatefulWidget {
   @override
@@ -225,36 +225,54 @@ class _HistoryPageState extends State<HistoryPage> {
                     final m = meals[idx];
                     final intake = calculateIntake([m]);
                     final title = m.mealNames.isNotEmpty ? m.mealNames.first : "식사";
-                    return Card(
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      elevation: 2,
-                      margin: EdgeInsets.zero,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          ClipRRect(
-                            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-                            child: Image.file(
-                              File(m.image.path),
-                              height: 70,
-                              width: double.infinity,
-                              fit: BoxFit.cover,
+                    return GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => NutritionResultPage(
+                              imagePath: m.image.path,
+                              nutrients: m.nutrients,
+                              selectedDate: _selectedDate!,
+                              mealNames: m.mealNames,
+                              servingsMap: m.servings,
+                              isFromHistory: true,
+                              sourceMeal: m,
                             ),
                           ),
-                          Padding(
-                            padding: EdgeInsets.fromLTRB(12, 4, 12, 0),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(title, style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
-                                SizedBox(height: 1),
-                                ..._buildGroupSummary(intake, dense: true),
-                              ],
+                        );
+                      },
+                      child: Card(
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        elevation: 2,
+                        margin: EdgeInsets.zero,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+                              child: Image.file(
+                                File(m.image.path),
+                                height: 70,
+                                width: double.infinity,
+                                fit: BoxFit.cover,
+                              ),
                             ),
-                          ),
-                        ],
+                            Padding(
+                              padding: EdgeInsets.fromLTRB(12, 4, 12, 0),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(title, style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                                  SizedBox(height: 1),
+                                  ..._buildGroupSummary(intake, dense: true),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     );
                   },

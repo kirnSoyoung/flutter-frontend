@@ -10,7 +10,7 @@ import '../utils/nutrient_utils.dart';
 import '../utils/api_service.dart';
 import '../widgets/box_section.dart';
 
-import 'diet_recognition_page.dart';
+import 'recognition_page.dart';
 
 class NutritionResultPage extends StatefulWidget {
   final String imagePath;
@@ -143,11 +143,8 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
 
     // ✅ 서버로 전송
     final success = await ApiService.saveUserNutrients(totalNutrients, dateOnly);
+    print("✅ saveUserNutrients result = $success");
 
-    setState(() => _isSaved = success);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(success ? '식단이 저장되었습니다.' : '식단 저장에 실패했습니다.')),
-    );
   }
 
 

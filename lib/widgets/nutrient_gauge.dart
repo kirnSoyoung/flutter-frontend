@@ -1,156 +1,47 @@
 import 'package:flutter/material.dart';
-import '../utils/nutrient_utils.dart';
-import '../theme/app_theme.dart';
 
-class NutrientGauge extends StatelessWidget {
+class NutrientProgressCircle extends StatelessWidget {
+  final double progress; // ex: 1.25 → 125%
   final String label;
-  final double currentValue;
-  final int mealsPerDay;
-  final bool isDailyTotal;
-  final double maxValue;
-  final int daySpan; // ✅ 추가: 기간 (1, 7, 30)
 
-  NutrientGauge({
+  const NutrientProgressCircle({
+    super.key,
+    required this.progress,
     required this.label,
-    required this.currentValue,
-    required this.mealsPerDay,
-    required this.isDailyTotal,
-    required this.maxValue,
-    this.daySpan = 1, // 기본값 하루
   });
 
   @override
   Widget build(BuildContext context) {
-    final double adjustedMax = maxValue * daySpan;
-    final double percentage = ((currentValue / adjustedMax) * 100).clamp(0.0, 999.9);
-    NutrientStatus status = _getNutrientStatus(percentage);
+    final percent = (progress * 100).round();
+    final color = progress > 1.0
+        ? Colors.red
+        : (progress >= 1.0 ? Colors.green : Colors.blueAccent);
 
-    return Container(
-      margin: EdgeInsets.only(bottom: 16),
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: status.color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: Offset(0, 2),
-                ),
-              ],
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Stack(
+          alignment: Alignment.center,
+          children: [
+            SizedBox(
+              width: 80,
+              height: 80,
+              child: CircularProgressIndicator(
+                value: progress.clamp(0.0, 1.0), // 게이지는 100%까지만
+                strokeWidth: 8,
+                backgroundColor: Colors.grey.shade200,
+                valueColor: AlwaysStoppedAnimation<Color>(color),
+              ),
             ),
-            child: Icon(
-              _getNutrientIcon(label),
-              color: status.color,
-              size: 24,
+            Text(
+              "$percent%",
+              style: const TextStyle(fontWeight: FontWeight.bold),
             ),
-          ),
-          SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      label,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Text(
-                      formatNutrientValue(label, currentValue),
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                        color: status.color,
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 8),
-                Text(
-                  status.message,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: status.color,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Text(label, style: const TextStyle(fontSize: 14)),
+      ],
     );
   }
-
-  String _normalizeNutrient(String nutrient) {
-    return nutrient.split('(').first.trim();
-  }
-
-  IconData _getNutrientIcon(String nutrient) {
-    final normalized = _normalizeNutrient(nutrient).toLowerCase();
-
-    switch (normalized) {
-      case "단백질":
-        return Icons.egg_alt;
-      case "탄수화물":
-        return Icons.breakfast_dining;
-      case "지방":
-        return Icons.oil_barrel;
-      case "비타민":
-        return Icons.local_florist;
-      case "칼슘":
-        return Icons.fitness_center;
-      case "에너지":
-        return Icons.local_fire_department;
-      default:
-        return Icons.scatter_plot;
-    }
-  }
-
-  NutrientStatus _getNutrientStatus(double percentage) {
-    if (percentage < 30) {
-      return NutrientStatus(
-        color: Colors.orange,
-        message: "섭취량이 부족해요",
-      );
-    } else if (percentage < 80) {
-      return NutrientStatus(
-        color: AppTheme.primaryColor,
-        message: "적절히 섭취하고 있어요",
-      );
-    } else if (percentage <= 110) {
-      return NutrientStatus(
-        color: Colors.green,
-        message: "권장량에 가깝게 섭취했어요",
-      );
-    } else {
-      return NutrientStatus(
-        color: Colors.red,
-        message: "과다 섭취했어요",
-      );
-    }
-  }
-}
-
-class NutrientStatus {
-  final Color color;
-  final String message;
-
-  NutrientStatus({
-    required this.color,
-    required this.message,
-  });
 }
