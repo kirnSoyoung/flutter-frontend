@@ -6,7 +6,7 @@ import 'nutrient_gauge.dart';
 
 class GroupedNutrientSection extends StatefulWidget {
   final Map<String, double> intakeMap;
-  final int? daySpan; // 일수 기준으로 정규화할 경우 사용
+  final int? daySpan; // optional multiplier for RDI 기준 일수
 
   const GroupedNutrientSection({
     Key? key,
@@ -20,6 +20,7 @@ class GroupedNutrientSection extends StatefulWidget {
 
 class _GroupedNutrientSectionState extends State<GroupedNutrientSection> {
   Map<String, double>? _rdi;
+  String? _selectedGroup;
 
   static const _groups = <String, List<String>>{
     '에너지': ['에너지'],
@@ -59,9 +60,15 @@ class _GroupedNutrientSectionState extends State<GroupedNutrientSection> {
     for (var k in keys) {
       final goal = (_rdi![k] ?? 0) * divisor;
       final got = widget.intakeMap[k] ?? 0;
-      if (goal > 0) sum += (got / goal); // clamp 제거 → 초과 표시 가능
+      if (goal > 0) sum += (got / goal);
     }
     return keys.isEmpty ? 0 : sum / keys.length;
+  }
+
+  void _toggleGroup(String label) {
+    setState(() {
+      _selectedGroup = _selectedGroup == label ? null : label;
+    });
   }
 
   @override
@@ -75,9 +82,12 @@ class _GroupedNutrientSectionState extends State<GroupedNutrientSection> {
     final secondRow = labels.sublist(3);
 
     Widget _buildCircle(String label) {
-      return NutrientProgressCircle(
-        progress: _calculateProgress(label),
-        label: label,
+      return GestureDetector(
+        onTap: () => _toggleGroup(label),
+        child: NutrientProgressCircle(
+          progress: _calculateProgress(label),
+          label: label,
+        ),
       );
     }
 
@@ -104,7 +114,36 @@ class _GroupedNutrientSectionState extends State<GroupedNutrientSection> {
               );
             }).toList(),
           ),
+          if (_selectedGroup != null) ...[
+            const SizedBox(height: 12),
+            _buildDetailList(_selectedGroup!),
+          ]
         ],
+      ),
+    );
+  }
+
+  Widget _buildDetailList(String group) {
+    final keys = _groups[group]!;
+    final divisor = widget.daySpan ?? 1;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: keys.map((nutrient) {
+          final amount = widget.intakeMap[nutrient] ?? 0;
+          final unit = nutrientUnits[nutrient] ?? '';
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 2),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(nutrient, style: const TextStyle(fontSize: 14)),
+                Text('${(amount / divisor).toStringAsFixed(2)} $unit', style: const TextStyle(fontSize: 14)),
+              ],
+            ),
+          );
+        }).toList(),
       ),
     );
   }
