@@ -38,10 +38,10 @@ class _SupplementPageState extends State<SupplementPage>
     });
   }
 
-  Future<void> _openUrl(String url) async {
+  Future<void> _launchUrl(String url) async {
     final uri = Uri.parse(url);
-    if (await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      throw 'Could not launch $uri';
     }
   }
 
@@ -97,7 +97,7 @@ class _SupplementPageState extends State<SupplementPage>
               itemBuilder: (context, i) {
                 final sup = list[i];
                 return GestureDetector(
-                  onTap: () => _openUrl(sup['url']),
+                  onTap: () => _launchUrl(sup['url']),
                   child: Card(
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),

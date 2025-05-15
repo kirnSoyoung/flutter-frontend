@@ -7,14 +7,12 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../screens/diet_recognition_page.dart';
-import '../screens/nutrition_result_page.dart';
 import '../utils/data_manager.dart';
-import '../utils/nutrition_standards.dart';
 import '../utils/nutrient_utils.dart';
 import '../utils/shared_prefs.dart';
-import '../widgets/nutrient_gauge.dart';
-import '../widgets/box_section.dart';
+import '../utils/nutrition_standards.dart';
 import '../models/meal_model.dart';
+import '../models/user_model.dart';
 
 class HistoryPage extends StatefulWidget {
   @override
@@ -32,21 +30,20 @@ class _HistoryPageState extends State<HistoryPage> {
     initializeDateFormatting('ko_KR');
     _currentWeekStart = _getWeekStart(DateTime.now());
     _selectedDate = DateTime.now();
-    _loadUserRdi();
+    _loadRdi();
   }
 
-  void _loadUserRdi() async {
+  Future<void> _loadRdi() async {
     final user = await SharedPrefs.getLoggedInUser();
     if (user != null) {
-      setState(() {
-        _rdi = calculatePersonalRequirements(user);
-      });
+      final rdi = calculatePersonalRequirements(user);
+      setState(() => _rdi = rdi);
     }
   }
 
   DateTime _getWeekStart(DateTime date) {
-    int weekday = date.weekday;
-    return date.subtract(Duration(days: weekday % 7));
+    int wd = date.weekday % 7;
+    return date.subtract(Duration(days: wd));
   }
 
   void _nextWeek() {
@@ -63,136 +60,125 @@ class _HistoryPageState extends State<HistoryPage> {
     });
   }
 
-  void _selectDate(DateTime date) {
-    setState(() {
-      _selectedDate = date;
-    });
-  }
+  void _selectDate(DateTime date) => setState(() => _selectedDate = date);
 
-  Map<String, double> calculateDailyIntake(List<Meal> meals, Map<String, double> baseKeys) {
-    final intake = <String, double>{};
-    for (var key in baseKeys.keys) {
-      intake[key] = 0.0;
-    }
-
+  Map<String, double> calculateIntake(List<Meal> meals) {
+    final result = <String, double>{};
+    if (_rdi == null) return result;
+    for (var k in _rdi!.keys) result[k] = 0.0;
     for (var meal in meals) {
-      meal.nutrients.forEach((food, nutrientMap) {
-        nutrientMap.forEach((key, value) {
-          final normalized = normalizeNutrientKey(key);
-          if (intake.containsKey(normalized)) {
-            intake[normalized] = intake[normalized]! + value;
-          }
+      meal.nutrients.forEach((_, nutMap) {
+        nutMap.forEach((k, v) {
+          final norm = normalizeNutrientKey(k);
+          if (result.containsKey(norm)) result[norm] = result[norm]! + v;
         });
       });
     }
+    return result;
+  }
 
-    return intake;
+  double calculateGroupPercent(Map<String, double> intake, List<String> keys) {
+    if (_rdi == null) return 0.0;
+    final filt = keys.where((k) => intake.containsKey(k)).toList();
+    if (filt.isEmpty) return 0.0;
+    final sum = filt.map((k) {
+      final goal = _rdi![k] ?? 1.0;
+      return (intake[k]! / goal).clamp(0.0, 1.0);
+    }).reduce((a, b) => a + b);
+    return (sum / filt.length).clamp(0.0, 1.0);
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_rdi == null) return Center(child: CircularProgressIndicator());
-
     final dataManager = Provider.of<DataManager>(context);
-    List<DateTime> weekDays = List.generate(
-        7, (index) => _currentWeekStart.add(Duration(days: index)));
+    final weekDays = List.generate(7, (i) => _currentWeekStart.add(Duration(days: i)));
     final meals = dataManager.getMealsForDate(_selectedDate!) ?? [];
-    final dailyIntake = calculateDailyIntake(meals, _rdi!);
+    final dailyIntake = calculateIntake(meals);
+
+    if (_rdi == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
     return Scaffold(
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          final pickedFile =
-          await ImagePicker().pickImage(source: ImageSource.gallery);
-          if (pickedFile != null) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => DietRecognitionPage(
-                  image: File(pickedFile.path),
-                  selectedDate: _selectedDate,
-                ),
+          final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
+          if (picked != null) {
+            Navigator.push(context, MaterialPageRoute(
+              builder: (_) => DietRecognitionPage(
+                image: File(picked.path),
+                selectedDate: _selectedDate,
               ),
-            );
+            ));
           }
         },
         backgroundColor: Theme.of(context).primaryColor,
-        child: const Icon(Icons.photo_library, color: Colors.white),
+        child: Icon(Icons.photo_library, color: Colors.white),
       ),
       body: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: EdgeInsets.all(16.0),
+            padding: EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    IconButton(
-                        icon: Icon(Icons.arrow_back), onPressed: _previousWeek),
+                    IconButton(icon: Icon(Icons.arrow_back), onPressed: _previousWeek),
                     Text(
                       DateFormat.yMMMM('ko_KR').format(_selectedDate!),
-                      style:
-                      TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
-                    IconButton(
-                        icon: Icon(Icons.arrow_forward), onPressed: _nextWeek),
+                    IconButton(icon: Icon(Icons.arrow_forward), onPressed: _nextWeek),
                   ],
                 ),
                 SizedBox(height: 10),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: weekDays.map((date) {
-                    final isSelected = _selectedDate?.day == date.day && _selectedDate?.month == date.month;
-                    final hasMeal = (dataManager.getMealsForDate(date)?.isNotEmpty ?? false);
-                    final weekdayLabel = DateFormat.E('ko_KR').format(date);
-                    final isSameMonth = date.month == _selectedDate?.month;
-
+                    final sel = _selectedDate;
+                    final isSel = sel?.day == date.day && sel?.month == date.month;
+                    final has = (dataManager.getMealsForDate(date)?.isNotEmpty ?? false);
+                    final same = date.month == sel?.month;
                     return GestureDetector(
                       onTap: () => _selectDate(date),
                       child: Column(
                         children: [
                           Text(
-                            weekdayLabel,
+                            DateFormat.E('ko_KR').format(date),
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
-                              color: isSameMonth ? Colors.black : Colors.grey,
+                              color: same ? Colors.black : Colors.grey,
                             ),
                           ),
                           SizedBox(height: 4),
                           Container(
-                            width: 36,
-                            height: 36,
+                            width: 36, height: 36,
                             alignment: Alignment.center,
                             decoration: BoxDecoration(
-                              color: isSelected ? Colors.green : Colors.transparent,
+                              color: isSel ? Colors.green : Colors.transparent,
                               shape: BoxShape.circle,
                             ),
                             child: Text(
                               '${date.day}',
                               style: TextStyle(
                                 fontSize: 16,
-                                fontWeight:
-                                isSelected ? FontWeight.bold : FontWeight.normal,
-                                color: isSelected
-                                    ? Colors.white
-                                    : isSameMonth
-                                    ? Colors.black
-                                    : Colors.grey,
+                                fontWeight: isSel ? FontWeight.bold : FontWeight.normal,
+                                color: isSel ? Colors.white : (same ? Colors.black : Colors.grey),
                               ),
                             ),
                           ),
                           SizedBox(height: 4),
                           Container(
-                            width: 6,
-                            height: 6,
+                            width: 6, height: 6,
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
-                              color: hasMeal ? Colors.green : Colors.transparent,
+                              color: has ? Colors.green : Colors.transparent,
                             ),
-                          )
+                          ),
                         ],
                       ),
                     );
@@ -201,66 +187,123 @@ class _HistoryPageState extends State<HistoryPage> {
               ],
             ),
           ),
+
           Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    height: 100,
-                    child: meals.isNotEmpty
-                        ? ListView(
-                      scrollDirection: Axis.horizontal,
-                      children: meals.map((meal) {
-                        return GestureDetector(
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => NutritionResultPage(
-                                  imagePath: meal.image.path,
-                                  nutrients: meal.nutrients,
-                                  selectedDate: _selectedDate!,
-                                  mealNames: meal.mealNames,
-                                  isFromHistory: true,
-                                  sourceMeal: meal,
-                                  servingsMap: meal.servings,
-                                ),
-                              ),
-                            );
-                          },
-                          child: Padding(
-                            padding: EdgeInsets.only(right: 10),
+            child: ListView(
+              padding: EdgeInsets.symmetric(horizontal: 16),
+              children: [
+                if (meals.isNotEmpty)
+                  Card(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    margin: EdgeInsets.only(bottom: 12),
+                    elevation: 3,
+                    child: Padding(
+                      padding: EdgeInsets.fromLTRB(16, 12, 16, 12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text("평균 섭취량", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                          SizedBox(height: 6),
+                          ..._buildGroupSummary(dailyIntake, dense: true),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                GridView.builder(
+                  shrinkWrap: true,
+                  physics: NeverScrollableScrollPhysics(),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 12,
+                    mainAxisSpacing: 12,
+                    childAspectRatio: 0.9,
+                  ),
+                  itemCount: meals.length,
+                  itemBuilder: (ctx, idx) {
+                    final m = meals[idx];
+                    final intake = calculateIntake([m]);
+                    final title = m.mealNames.isNotEmpty ? m.mealNames.first : "식사";
+                    return Card(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      elevation: 2,
+                      margin: EdgeInsets.zero,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
                             child: Image.file(
-                              File(meal.image.path),
-                              width: 100,
-                              height: 100,
+                              File(m.image.path),
+                              height: 70,
+                              width: double.infinity,
                               fit: BoxFit.cover,
                             ),
                           ),
-                        );
-                      }).toList(),
-                    )
-                        : Center(child: Text("등록된 식단이 없습니다.")),
-                  ),
-                  const SizedBox(height: 20),
-                  if (meals.isNotEmpty) ...[
-                    Text(
-                      DateFormat('MM월 dd일의 영양소 섭취량', 'ko_KR').format(_selectedDate!),
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 10),
-                    GroupedNutrientSection(intakeMap: dailyIntake),
-                    const SizedBox(height: 80),
-                  ],
-                ],
-              ),
+                          Padding(
+                            padding: EdgeInsets.fromLTRB(12, 4, 12, 0),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(title, style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                                SizedBox(height: 1),
+                                ..._buildGroupSummary(intake, dense: true),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ],
             ),
-          )
+          ),
         ],
       ),
     );
+  }
+
+  List<Widget> _buildGroupSummary(Map<String, double> intake, {bool dense = false}) {
+    final groups = {
+      '에너지': ['에너지'],
+      '탄수화물': ['탄수화물', '식이섬유'],
+      '단백질/지방': ['단백질', '지방'],
+      '비타민': [
+        '비타민A','비타민B1','비타민B2','비타민B6','비타민B12',
+        '비타민C','비타민D','비타민E','비타민K',
+        '엽산','나이아신','판토텐산','비오틴'
+      ],
+      '미네랄': [
+        '칼슘','마그네슘','철','아연','구리','망간',
+        '요오드','셀레늄','인','나트륨','칼륨'
+      ],
+    };
+    final entries = groups.entries.toList();
+    return List.generate(entries.length, (i) {
+      final label = entries[i].key;
+      final pct = calculateGroupPercent(intake, entries[i].value);
+      return Padding(
+        padding: EdgeInsets.only(bottom: i == entries.length - 1 ? 0 : (dense ? 2 : 6)),
+        child: Row(
+          children: [
+            SizedBox(width: dense ? 70 : 100, child: Text(label, style: TextStyle(fontSize: dense ? 13 : 14))),
+            Expanded(
+              child: LinearProgressIndicator(
+                value: pct,
+                backgroundColor: Colors.grey[200],
+                color: Colors.green,
+                minHeight: dense ? 4 : 6,
+              ),
+            ),
+            SizedBox(width: 4),
+            Text("${(pct * 100).toStringAsFixed(0)}%", style: TextStyle(fontSize: dense ? 12 : 14)),
+          ],
+        ),
+      );
+    });
   }
 }
