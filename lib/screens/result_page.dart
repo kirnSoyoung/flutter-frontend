@@ -217,7 +217,7 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
               Navigator.pushReplacement(
                 context,
                 MaterialPageRoute(
-                  builder: (context) => DietRecognitionPage(
+                  builder: (context) => RecognitionPage(
                     image: File(widget.imagePath),
                     selectedDate: widget.selectedDate,
                     sourceMeal: widget.sourceMeal,

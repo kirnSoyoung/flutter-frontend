@@ -6,8 +6,6 @@ import '../utils/data_manager.dart';
 import '../utils/nutrition_standards.dart';
 import '../utils/nutrient_utils.dart';
 import '../utils/shared_prefs.dart';
-import '../widgets/image_picker_widget.dart';
-import '../widgets/nutrient_gauge.dart';
 import '../widgets/box_section.dart';
 import '../theme/app_theme.dart';
 import 'recognition_page.dart';
@@ -53,7 +51,7 @@ class _HomePageState extends State<HomePage> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => DietRecognitionPage(image: image),
+        builder: (context) => RecognitionPage(image: image),
       ),
     ).then((_) => setState(() {}));
   }

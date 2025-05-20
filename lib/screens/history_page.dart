@@ -107,7 +107,7 @@ class _HistoryPageState extends State<HistoryPage> {
           final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
           if (picked != null) {
             Navigator.push(context, MaterialPageRoute(
-              builder: (_) => DietRecognitionPage(
+              builder: (_) => RecognitionPage(
                 image: File(picked.path),
                 selectedDate: _selectedDate,
               ),

@@ -1,10 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:provider/provider.dart';
 
 import '../models/meal_model.dart';
-import '../utils/data_manager.dart';
 import '../utils/file_manager.dart';
 import '../utils/food_list.dart';
 import '../utils/api_service.dart';
@@ -18,22 +16,22 @@ class RecognizedFood {
   RecognizedFood(this.label, this.confidence);
 }
 
-class DietRecognitionPage extends StatefulWidget {
+class RecognitionPage extends StatefulWidget {
   final File image;
   final DateTime? selectedDate;
   final Meal? sourceMeal;
 
-  const DietRecognitionPage({
+  const RecognitionPage({
     required this.image,
     this.selectedDate,
     this.sourceMeal,
   });
 
   @override
-  State<DietRecognitionPage> createState() => _DietRecognitionPageState();
+  State<RecognitionPage> createState() => _RecognitionPageState();
 }
 
-class _DietRecognitionPageState extends State<DietRecognitionPage> {
+class _RecognitionPageState extends State<RecognitionPage> {
   List<RecognizedFood> recognizedFoods = [];
   List<String> selectedFoods = [];
   List<String> mealOptions = [];
@@ -122,7 +120,6 @@ class _DietRecognitionPageState extends State<DietRecognitionPage> {
   }
 
   Future<void> proceedToAnalysis() async {
-    final dataManager = Provider.of<DataManager>(context, listen: false);
     final DateTime mealDate = widget.selectedDate ?? DateTime.now();
     if (selectedImagePath == null || selectedFoods.isEmpty) return;
 
@@ -177,7 +174,11 @@ class _DietRecognitionPageState extends State<DietRecognitionPage> {
     final suggestions = getFilteredSuggestions(searchController.text);
 
     return Scaffold(
-      appBar: AppBar(title: Text("식단 인식")),
+      appBar: AppBar(
+        title: Text('음식 인식', style: TextStyle(color: Colors.green)),
+        backgroundColor: Colors.white,
+        iconTheme: IconThemeData(color: Colors.green),
+      ),
       body: isUploading
           ? Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
