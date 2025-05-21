@@ -24,10 +24,10 @@ class _EditProfilePageState extends State<EditProfilePage> {
   late String selectedActivityLabel;
 
   final Map<String, double> activityLevelMap = {
-    '일상적 생활만 한다': 1.2,
-    '가벼운 운동을 주 1-3회': 1.5,
-    '주 3-5일 운동을 한다(헬스)': 1.725,
-    '강도높은 운동이나 육체노동': 1.9,
+    "활동량: 낮음 (일상적 생활만 함)": 1.2,
+    "활동량: 보통 (주 1-3회 가벼운 운동)": 1.5,
+    "활동량: 높음 (주 3-5 일 운동(헬스))": 1.725,
+    "활동량: 매우 높음 (강도높은 운동이나 육체노동)": 1.9,
   };
 
   @override

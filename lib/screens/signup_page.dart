@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../models/user_model.dart';
 import '../utils/shared_prefs.dart';
 import '../utils/api_service.dart';
@@ -29,6 +30,7 @@ class _SignupPageState extends State<SignupPage> {
     "높음": "활동량: 높음 (주 3-5 일 운동(헬스))",
     "매우 높음": "활동량: 매우 높음 (강도높은 운동이나 육체노동)",
   };
+
   final Map<String, double> activityLevelFactors = {
     "낮음": 1.2,
     "보통": 1.5,
@@ -113,7 +115,7 @@ class _SignupPageState extends State<SignupPage> {
   Widget _buildAccountInfo() {
     return Column(
       children: [
-        _buildInputField(userIdController, "아이디", "사용할 아이디를 입력해주세요", Icons.person_outline,
+        _buildInputField(userIdController, "아이디", "사용할 아이디를 입력해주세요", Icons.person_outline, TextInputType.text, true,
         ),
         if (errorMessage.isNotEmpty)
           Padding(
@@ -162,7 +164,7 @@ class _SignupPageState extends State<SignupPage> {
   }
 
   Widget _buildInputField(
-      TextEditingController controller, String label, String hint, IconData icon, [TextInputType? keyboardType]) {
+      TextEditingController controller, String label, String hint, IconData icon, [TextInputType? keyboardType, bool isUserId = false]) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -177,6 +179,10 @@ class _SignupPageState extends State<SignupPage> {
           child: TextField(
             controller: controller,
             keyboardType: keyboardType,
+            textCapitalization: TextCapitalization.none,
+            inputFormatters: isUserId
+                ? [FilteringTextInputFormatter.allow(RegExp(r'[a-zA-Z0-9_]'))]
+                : null,
             decoration: InputDecoration(
               hintText: hint,
               hintStyle: TextStyle(color: Colors.grey[500]),
