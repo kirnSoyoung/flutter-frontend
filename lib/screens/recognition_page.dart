@@ -1,5 +1,3 @@
-// 수정
-
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -24,10 +22,11 @@ class RecognitionPage extends StatefulWidget {
   final Meal? sourceMeal;
 
   const RecognitionPage({
+    Key? key,
     required this.image,
     this.selectedDate,
     this.sourceMeal,
-  });
+  }) : super(key: key);
 
   @override
   State<RecognitionPage> createState() => _RecognitionPageState();
@@ -56,7 +55,8 @@ class _RecognitionPageState extends State<RecognitionPage> {
     final defaultServing = user?.servingSize ?? 1.0;
 
     if (widget.sourceMeal != null && widget.sourceMeal!.servings.isNotEmpty) {
-      servings = widget.sourceMeal!.servings;
+      servings = Map.from(widget.sourceMeal!.servings);
+      selectedFoods = servings.keys.toList();
     } else {
       servings = { for (var food in selectedFoods) food: defaultServing };
     }
@@ -106,8 +106,6 @@ class _RecognitionPageState extends State<RecognitionPage> {
 
     for (String food in selectedFoods) {
       final nutrients = await ApiService.fetchNutrientsByName(food);
-      print("📡 $food → API nutrients: $nutrients");
-
       if (nutrients != null) {
         final normalized = <String, double>{};
         nutrients.forEach((label, value) {
@@ -126,7 +124,6 @@ class _RecognitionPageState extends State<RecognitionPage> {
     if (selectedImagePath == null || selectedFoods.isEmpty) return;
 
     final nutrientsByFood = await fetchIndividualNutrients();
-
     final filteredServings = {
       for (final food in selectedFoods) food: servings[food] ?? 1.0
     };
@@ -148,8 +145,8 @@ class _RecognitionPageState extends State<RecognitionPage> {
   }
 
   void _addFoodFromSearch(String input) {
-    if (input.trim().isEmpty) return;
     final value = input.trim();
+    if (value.isEmpty) return;
     if (!selectedFoods.contains(value) && mealOptions.contains(value)) {
       setState(() {
         selectedFoods.add(value);
@@ -177,48 +174,65 @@ class _RecognitionPageState extends State<RecognitionPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('음식 인식', style: TextStyle(color: Colors.green)),
+        title: const Text('음식 인식', style: TextStyle(color: Colors.green)),
         backgroundColor: Colors.white,
-        iconTheme: IconThemeData(color: Colors.green),
+        iconTheme: const IconThemeData(color: Colors.green),
+        elevation: 0,
       ),
       body: isUploading
-          ? Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
-        padding: EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Image.file(widget.image, width: double.infinity, height: 250, fit: BoxFit.cover),
-            SizedBox(height: 16),
+            // 업로드된 이미지
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.file(
+                widget.image,
+                width: double.infinity,
+                height: 250,
+                fit: BoxFit.cover,
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // 검색창
             TextField(
               controller: searchController,
               decoration: InputDecoration(
                 hintText: "음식 이름을 검색하세요",
                 suffixIcon: searchController.text.isNotEmpty
                     ? IconButton(
-                  icon: Icon(Icons.clear),
+                  icon: const Icon(Icons.clear),
                   onPressed: () => setState(() => searchController.clear()),
                 )
                     : null,
-                border: OutlineInputBorder(),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(6),
+                ),
               ),
               onChanged: (_) => setState(() {}),
               onSubmitted: _addFoodFromSearch,
             ),
+
             if (searchController.text.isNotEmpty && suggestions.isNotEmpty)
               Container(
-                constraints: BoxConstraints(maxHeight: 200),
+                margin: const EdgeInsets.only(top: 8),
+                constraints: const BoxConstraints(maxHeight: 200),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   border: Border.all(color: Colors.grey.shade300),
-                  borderRadius: BorderRadius.circular(4),
+                  borderRadius: BorderRadius.circular(6),
                 ),
                 child: ListView(
                   shrinkWrap: true,
                   children: suggestions.map((s) {
-                    final confidence = getConfidence(s);
-                    final labelText = (confidence != null && confidence > 0)
-                        ? "$s (${(confidence * 100).toStringAsFixed(0)}%)"
+                    final conf = getConfidence(s);
+                    final labelText = (conf != null && conf > 0)
+                        ? "$s (${(conf * 100).toStringAsFixed(0)}%)"
                         : s;
                     return ListTile(
                       title: Text(labelText),
@@ -232,47 +246,76 @@ class _RecognitionPageState extends State<RecognitionPage> {
                   }).toList(),
                 ),
               ),
-            SizedBox(height: 12),
 
+            const SizedBox(height: 20),
+
+            // 인식된 음식별 카드 + 슬라이더
             Column(
               children: selectedFoods.map((label) {
                 final currentServing = servings[label] ?? 1.0;
                 return Container(
-                  margin: EdgeInsets.only(bottom: 12),
-                  padding: EdgeInsets.all(12),
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: Colors.grey[100],
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey[300]!),
+                    border: Border.all(color: Colors.grey.shade300),
                   ),
-                  child: Stack(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Positioned(
-                        top: 0,
-                        right: 0,
-                        child: GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              selectedFoods.remove(label);
-                              servings.remove(label);
-                            });
-                          },
-                          child: Icon(Icons.close, size: 20, color: Colors.grey),
-                        ),
-                      ),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      // 음식 이름 + 삭제 버튼
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(label, style: TextStyle(fontWeight: FontWeight.bold)),
-                          Slider(
-                            value: currentServing,
-                            onChanged: (value) => setState(() => servings[label] = value),
-                            min: 0.5,
-                            max: 5.0,
-                            divisions: 9,
-                            label: "${currentServing.toStringAsFixed(1)} 인분",
+                          Text(label,
+                              style: const TextStyle(
+                                  fontSize: 16, fontWeight: FontWeight.bold)),
+                          GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                selectedFoods.remove(label);
+                                servings.remove(label);
+                              });
+                            },
+                            child: const Icon(Icons.close, size: 20, color: Colors.grey),
                           ),
                         ],
+                      ),
+
+                      const SizedBox(height: 8),
+
+                      // 🍚 아이콘 + 인분 수 항상 표시
+                      Row(
+                        children: [
+                          const Icon(Icons.rice_bowl, color: Colors.green),
+                          const SizedBox(width: 6),
+                          Text(
+                            '${currentServing.toStringAsFixed(1)} 인분',
+                            style: const TextStyle(
+                                fontSize: 14, fontWeight: FontWeight.w500),
+                          ),
+                        ],
+                      ),
+
+                      // 커스터마이징된 초록 슬라이더
+                      SliderTheme(
+                        data: SliderTheme.of(context).copyWith(
+                          activeTrackColor: Colors.green,
+                          inactiveTrackColor: Colors.green.withOpacity(0.3),
+                          thumbColor: Colors.green,
+                          overlayColor: Colors.green.withOpacity(0.15),
+                          valueIndicatorColor: Colors.green,
+                          showValueIndicator: ShowValueIndicator.always,
+                        ),
+                        child: Slider(
+                          value: currentServing,
+                          min: 0.5,
+                          max: 5.0,
+                          divisions: 9,
+                          label: '${currentServing.toStringAsFixed(1)}인분',
+                          onChanged: (v) => setState(() => servings[label] = v),
+                        ),
                       ),
                     ],
                   ),
@@ -280,13 +323,22 @@ class _RecognitionPageState extends State<RecognitionPage> {
               }).toList(),
             ),
 
+            const SizedBox(height: 24),
 
-            SizedBox(height: 20),
+            // 분석 진행 버튼
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                ),
                 onPressed: selectedFoods.isNotEmpty ? proceedToAnalysis : null,
-                child: Text("영양소 분석 진행"),
+                child: const Text('영양소 분석 진행'),
               ),
             ),
           ],
