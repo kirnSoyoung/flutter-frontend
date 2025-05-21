@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../utils/shared_prefs.dart';
 import '../utils/nutrition_standards.dart';
-import '../models/user_model.dart';
+import '../utils/nutrient_utils.dart';
 import 'nutrient_gauge.dart';
 
 class GroupedNutrientSection extends StatefulWidget {
@@ -139,7 +139,7 @@ class _GroupedNutrientSectionState extends State<GroupedNutrientSection> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(nutrient, style: const TextStyle(fontSize: 14)),
-                Text('${(amount / divisor).toStringAsFixed(2)} $unit', style: const TextStyle(fontSize: 14)),
+                Text(formatNutrientValue(nutrient, amount / divisor) , style: const TextStyle(fontSize: 14)),
               ],
             ),
           );

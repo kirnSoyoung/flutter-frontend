@@ -36,7 +36,7 @@ class NutrientDetailPopup extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(nutrient),
-                  Text("${value.toStringAsFixed(2)} $unit"),
+                  Text(formatNutrientValue(nutrient, value)),
                 ],
               ),
             );

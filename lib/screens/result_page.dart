@@ -148,12 +148,7 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
     if (success) {
       setState(() => _isSaved = true);
 
-      Navigator.of(context).pushAndRemoveUntil(
-        MaterialPageRoute(
-          builder: (_) => MainScreen(),
-        ),
-            (route) => false,
-      );
+      Navigator.of(context).pop(); // 결과 페이지 닫기
     }
 
   }
@@ -222,30 +217,31 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
           ),
         ),
         const SizedBox(height: 12),
-        Center(
-          child: GestureDetector(
-            onTap: () {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => RecognitionPage(
-                    image: File(widget.imagePath),
-                    selectedDate: widget.selectedDate,
-                    sourceMeal: widget.sourceMeal,
+        if (!widget.isFromHistory)
+          Center(
+            child: GestureDetector(
+              onTap: () {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => RecognitionPage(
+                      image: File(widget.imagePath),
+                      selectedDate: widget.selectedDate,
+                      sourceMeal: widget.sourceMeal,
+                    ),
                   ),
+                );
+              },
+              child: Text(
+                "다시 분석하기",
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 14,
+                  decoration: TextDecoration.underline,
                 ),
-              );
-            },
-            child: Text(
-              "다시 분석하기",
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 14,
-                decoration: TextDecoration.underline,
               ),
             ),
           ),
-        ),
       ],
     );
   }
