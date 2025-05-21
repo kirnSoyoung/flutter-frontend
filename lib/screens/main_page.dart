@@ -13,8 +13,6 @@ import 'result_page.dart';
 import '../models/meal_model.dart';
 
 class HomePage extends StatefulWidget {
-  final String email;
-  HomePage(this.email);
 
   @override
   _HomePageState createState() => _HomePageState();

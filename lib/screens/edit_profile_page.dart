@@ -21,13 +21,23 @@ class _EditProfilePageState extends State<EditProfilePage> {
   late TextEditingController weightController;
   late TextEditingController servingController;
   late String selectedGender;
-  late String activityLevel;
+  late String selectedActivityLabel;
+
+  final Map<String, double> activityLevelMap = {
+    '일상적 생활만 한다': 1.2,
+    '가벼운 운동을 주 1-3회': 1.5,
+    '주 3-5일 운동을 한다(헬스)': 1.725,
+    '강도높은 운동이나 육체노동': 1.9,
+  };
 
   @override
   void initState() {
     super.initState();
     selectedGender = widget.user.gender;
-    activityLevel = widget.user.activityLevel;
+    selectedActivityLabel = activityLevelMap.entries
+        .firstWhere((e) => e.value == widget.user.activityLevel,
+        orElse: () => const MapEntry("가벼운 운동을 주 1-3회", 1.5))
+        .key;
     ageController = TextEditingController(text: widget.user.age.toString());
     heightController = TextEditingController(text: widget.user.height.toString());
     weightController = TextEditingController(text: widget.user.weight.toString());
@@ -36,18 +46,16 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   Future<void> _saveUserData() async {
     User updatedUser = User(
-      email: widget.user.email,
-      password: widget.user.password,
+      userId: widget.user.userId,
       gender: selectedGender,
       age: int.tryParse(ageController.text) ?? 20,
       height: double.tryParse(heightController.text) ?? 170.0,
       weight: double.tryParse(weightController.text) ?? 60.0,
-      activityLevel: activityLevel,
+      activityLevel: activityLevelMap[selectedActivityLabel] ?? 1.5,
       servingSize: double.tryParse(servingController.text) ?? 1.0,
     );
     await SharedPrefs.saveUser(updatedUser);
     await SharedPrefs.saveLoggedInUser(updatedUser);
-    // ✅ 서버에 수정된 프로필 반영
     await ApiService.saveUserProfile(updatedUser);
 
     if (context.mounted) {
@@ -135,13 +143,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
                     const SizedBox(height: 16),
                     CustomLabeledDropdown(
                       label: "활동 수준",
-                      value: activityLevel,
+                      value: selectedActivityLabel,
                       items: {
-                        "낮음": "활동량: 낮음 (거의 운동 안 함)",
-                        "보통": "활동량: 보통 (주 1~2회 가벼운 운동)",
-                        "높음": "활동량: 높음 (주 3회 이상 운동)"
+                        for (var entry in activityLevelMap.entries)
+                          entry.key: "활동량: ${entry.key}"
                       },
-                      onChanged: (value) => setState(() => activityLevel = value!),
+                      onChanged: (value) => setState(() => selectedActivityLabel = value!),
                     ),
                     const SizedBox(height: 16),
                     CustomInputField(

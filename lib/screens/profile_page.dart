@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../models/user_model.dart';
 import '../utils/shared_prefs.dart';
-import 'login_page.dart';
 import 'edit_profile_page.dart';
 
 class ProfilePage extends StatefulWidget {
@@ -28,15 +27,6 @@ class _ProfilePageState extends State<ProfilePage> {
     });
   }
 
-  Future<void> _logout() async {
-    await SharedPrefs.logout();
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (context) => LoginPage()),
-          (route) => false,
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -58,13 +48,11 @@ class _ProfilePageState extends State<ProfilePage> {
               _buildActionItem(Icons.edit, "정보 수정", onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => EditProfilePage(user: currentUser!)),
+                  MaterialPageRoute(
+                    builder: (context) => EditProfilePage(user: currentUser!),
+                  ),
                 ).then((_) => _loadUser());
               }),
-              _buildActionItem(Icons.lock_outline, "비밀번호 변경", onTap: () {
-                // 추후 비밀번호 변경 기능 연결 예정 ✨
-              }),
-              _buildActionItem(Icons.logout, "로그아웃", onTap: _logout),
               const SizedBox(height: 40),
             ],
           ),
@@ -126,8 +114,17 @@ class _ProfilePageState extends State<ProfilePage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                currentUser?.email ?? "이메일 정보 없음",
-                style: TextStyle(color: Colors.grey[600]),
+                "사용자 ID",
+                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+              ),
+              SizedBox(height: 4),
+              Text(
+                currentUser?.userId ?? "알 수 없음",
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.black87,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           )
@@ -150,7 +147,7 @@ class _ProfilePageState extends State<ProfilePage> {
           _buildInfoRow("목표 섭취 칼로리", "${_calculateTargetCalories(currentUser!)} kcal"),
           _buildInfoRow("성별", currentUser!.gender),
           _buildInfoRow("나이", "${currentUser!.age}세"),
-          _buildInfoRow("활동량", currentUser!.activityLevel),
+          _buildInfoRow("활동량", currentUser!.activityLevel.toString()),
           _buildInfoRow("기본 인분 수", "${currentUser!.servingSize.toStringAsFixed(1)} 인분"),
         ],
       ),
@@ -209,10 +206,6 @@ class _ProfilePageState extends State<ProfilePage> {
       bmr = 10 * user.weight + 6.25 * user.height - 5 * user.age - 161;
     }
 
-    double activityFactor = 1.2;
-    if (user.activityLevel == "보통") activityFactor = 1.375;
-    if (user.activityLevel == "높음") activityFactor = 1.55;
-
-    return (bmr * activityFactor).round();
+    return (bmr * user.activityLevel).round(); // activityLevel은 숫자(double)
   }
 }

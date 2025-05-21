@@ -6,9 +6,8 @@ import 'supplement_page.dart';
 import 'profile_page.dart';
 
 class MainScreen extends StatefulWidget {
-  final String email;
 
-  MainScreen({required this.email});
+  MainScreen();
 
   @override
   _MainScreenState createState() => _MainScreenState();
@@ -22,7 +21,7 @@ class _MainScreenState extends State<MainScreen> {
   void initState() {
     super.initState();
     _pages = [
-      HomePage(widget.email),
+      HomePage(),
       HistoryPage(),
       SupplementPage(),
       ProfilePage(),

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
-import 'login_page.dart';
 import 'signup_page.dart';
 
 class OnboardingPage extends StatefulWidget {
@@ -329,18 +328,6 @@ class _OnboardingPageState extends State<OnboardingPage> {
             ),
           ),
           SizedBox(height: 16),
-          TextButton(
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => LoginPage()),
-              );
-            },
-            child: Text(
-              "이미 계정이 있으신가요? 로그인",
-              style: TextStyle(color: Colors.grey[600]),
-            ),
-          ),
         ],
       ),
     );

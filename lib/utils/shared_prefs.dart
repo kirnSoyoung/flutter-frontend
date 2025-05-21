@@ -1,16 +1,16 @@
 import 'dart:convert';
-
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
-
 import '../models/user_model.dart';
 import '../models/meal_model.dart';
 
 /// SharedPreferences를 활용한 사용자 정보 관리 클래스
 class SharedPrefs {
-
   static const String mealKey = 'meal_records';
+  static const String userKey = 'users';
+  static const String loggedInKey = 'loggedInUser';
 
+  /// 식단 정보 저장
   static Future<void> saveMeals(Map<DateTime, List<Meal>> meals) async {
     final prefs = await SharedPreferences.getInstance();
     final Map<String, dynamic> jsonMap = {};
@@ -24,15 +24,14 @@ class SharedPrefs {
     await prefs.setString(mealKey, encoded);
   }
 
+  /// 식단 정보 불러오기
   static Future<Map<DateTime, List<Meal>>> loadMeals() async {
     final prefs = await SharedPreferences.getInstance();
     final Map<DateTime, List<Meal>> loaded = {};
-
     final encoded = prefs.getString(mealKey);
     if (encoded == null) return loaded;
 
     final decoded = jsonDecode(encoded) as Map<String, dynamic>;
-
     decoded.forEach((dateStr, mealListJson) {
       final date = DateFormat('yyyy-MM-dd').parse(dateStr);
       final mealList = (mealListJson as List).map((json) => Meal.fromJson(json)).toList();
@@ -42,9 +41,10 @@ class SharedPrefs {
     return loaded;
   }
 
+  /// 모든 사용자 목록 가져오기
   static Future<List<User>> getUsers() async {
     final prefs = await SharedPreferences.getInstance();
-    final String? storedUsers = prefs.getString('users');
+    final String? storedUsers = prefs.getString(userKey);
 
     if (storedUsers == null || storedUsers.isEmpty) return [];
     try {
@@ -56,9 +56,10 @@ class SharedPrefs {
     }
   }
 
+  /// 사용자 저장 (기존 사용자 ID 제거 후 업데이트)
   static Future<void> saveUser(User user) async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    String? usersJson = prefs.getString("users");
+    final prefs = await SharedPreferences.getInstance();
+    String? usersJson = prefs.getString(userKey);
 
     List<User> users = [];
     if (usersJson != null) {
@@ -67,63 +68,41 @@ class SharedPrefs {
           .toList();
     }
 
-    // 기존 동일 이메일 사용자 제거
-    users.removeWhere((u) => u.email == user.email);
+    users.removeWhere((u) => u.userId == user.userId);
+    users.add(user);
 
-    users.add(user); // 업데이트된 사용자 추가
-
-    await prefs.setString("users", jsonEncode(users.map((u) => u.toJson()).toList()));
+    await prefs.setString(userKey, jsonEncode(users.map((u) => u.toJson()).toList()));
   }
 
-  /// 자동 로그인 정보 저장
-  static Future<void> saveLoginInfo(String email, String password) async {
-    final prefs = await SharedPreferences.getInstance();
-    prefs.setString('loggedInEmail', email);
-    prefs.setString('loggedInPassword', password);
-  }
-
-  static Future<User?> getLoggedInUser() async {
-    final prefs = await SharedPreferences.getInstance();
-    String? email = prefs.getString('loggedInEmail');
-    String? password = prefs.getString('loggedInPassword');
-
-    if (email == null || password == null) return null;
-
-    List<User> users = await getUsers();
-    return users.firstWhere(
-          (user) => user.email == email && user.password == password,
-      orElse: () => User(
-        email: "",
-        password: "",
-        gender: "",
-        age: 0,
-        height: 0,
-        weight: 0,
-        activityLevel: "",
-        servingSize: 0.0,
-      ),
-    );
-  }
-
-  /// 로그아웃 (자동 로그인 정보 삭제)
-  static Future<void> logout() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('loggedInEmail');
-    await prefs.remove('loggedInPassword');
-  }
-
-
-  /// 테스트용-데이터 삭제 버튼
-  void resetMeals() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('meal_records'); // 우리가 저장했던 키
-    print('✅ 모든 저장된 식단 데이터를 삭제했습니다.');
-  }
-
+  /// 로그인된 사용자 정보 저장
   static Future<void> saveLoggedInUser(User user) async {
     final prefs = await SharedPreferences.getInstance();
-    prefs.setString('loggedInUserEmail', user.email);
-    prefs.setString('loggedInUser', jsonEncode(user.toJson())); // ✅ 유저 정보를 통째로 저장
+    await prefs.setString(loggedInKey, jsonEncode(user.toJson()));
   }
 
+  /// 로그인된 사용자 정보 가져오기
+  static Future<User?> getLoggedInUser() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userJson = prefs.getString(loggedInKey);
+    if (userJson == null) return null;
+
+    try {
+      return User.fromJson(jsonDecode(userJson));
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// 로그아웃
+  static Future<void> logout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(loggedInKey);
+  }
+
+  /// 테스트용 데이터 리셋
+  static Future<void> resetMeals() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(mealKey);
+    print('✅ 모든 저장된 식단 데이터를 삭제했습니다.');
+  }
 }

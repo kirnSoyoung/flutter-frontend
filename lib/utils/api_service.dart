@@ -61,7 +61,7 @@ class ApiService {
         Uri.parse("$baseUrl/database/user/save"),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'user_id': user.email,
+          'user_id': user.userId,
           'date': date,
           'nutrients': nutrientsList,
         }),
@@ -84,7 +84,7 @@ class ApiService {
       final response = await http.post(
         Uri.parse("$baseUrl/database/user/delete"),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'user_id': user.email, 'date': date, 'nutrients': {}}),
+        body: jsonEncode({'user_id': user.userId, 'date': date, 'nutrients': {}}),
       );
       return response.statusCode == 200;
     } catch (e) {
@@ -93,28 +93,95 @@ class ApiService {
     }
   }
 
-  static Future<bool> saveUserProfile(User user) async {
+  static Future<bool> registerUser(User user) async {
     try {
+      final uri = Uri.parse("$baseUrl/database/user/register")
+          .replace(queryParameters: {'userid': user.userId});
+
+      final genderMap = {
+        "남성": "male",
+        "여성": "female",
+      };
+
+
+      // 문자열 활동 수준을 수치로 변환
+      final Map<String, double> activityLevelFactors = {
+        "낮음": 1.2,
+        "보통": 1.5,
+        "높음": 1.725,
+        "매우 높음": 1.9,
+      };
+
       final response = await http.post(
-        Uri.parse("$baseUrl/database/user/profile"),
+        uri,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
-          'user_id': user.email,
-          'age': user.age,
-          'height': user.height,
-          'weight': user.weight,
-          'gender': user.gender,
-          'activity_level': user.activityLevel,
+          'gender': genderMap[user.gender] ?? "male",
+          'age': user.age.toString(),
+          'height': user.height.toString(),
+          'weight': user.weight.toString(),
+          'act_level': activityLevelFactors[user.activityLevel]?.toString() ?? "1.5",
         }),
       );
 
-      return response.statusCode == 200;
+      if (response.statusCode == 200) {
+        print("✅ 회원가입 성공");
+        return true;
+      } else if (response.statusCode == 409) {
+        print("❌ 아이디 중복됨");
+        return false;
+      } else {
+        print("❌ 기타 에러: ${response.statusCode}");
+        return false;
+      }
+    } catch (e) {
+      print("❌ registerUser 예외 발생: $e");
+      return false;
+    }
+  }
+
+
+  static Future<bool> saveUserProfile(User user) async {
+    try {
+      final uri = Uri.parse("$baseUrl/database/user/profile")
+          .replace(queryParameters: {'userid': user.userId});
+
+      final genderMap = {
+        "남성": "male",
+        "여성": "female",
+      };
+
+      final activityLevelFactors = {
+        "낮음": 1.2,
+        "보통": 1.5,
+        "높음": 1.725,
+        "매우 높음": 1.9,
+      };
+
+      final response = await http.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({
+          'gender': genderMap[user.gender] ?? "male",
+          'age': user.age.toString(),
+          'height': user.height.toString(),
+          'weight': user.weight.toString(),
+          'act_level': activityLevelFactors[user.activityLevel]?.toString() ?? "1.5",
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        print("✅ 프로필 저장 성공");
+        return true;
+      } else {
+        print("❌ 프로필 저장 실패: ${response.statusCode}");
+        return false;
+      }
     } catch (e) {
       print("❌ saveUserProfile 예외 발생: $e");
       return false;
     }
   }
-
 
 
   /// 영양제 추천 받아오기
@@ -124,7 +191,7 @@ class ApiService {
       if (user == null) return {};
 
       final response = await http.get(
-        Uri.parse("$baseUrl/supplements/recommend/${Uri.encodeComponent(user.email)}"),
+        Uri.parse("$baseUrl/supplements/recommend/${Uri.encodeComponent(user.userId)}"),
       );
 
       if (response.statusCode == 200) {

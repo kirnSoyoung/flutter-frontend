@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:provider/provider.dart';
 
-import 'screens/login_page.dart';
 import 'screens/navigation_bar.dart';
 import 'screens/onboarding_page.dart';
 import 'utils/data_manager.dart';
@@ -42,7 +41,7 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.theme,
       home: loggedInUser != null
-          ? MainScreen(email: loggedInUser!.email)
+          ? MainScreen()
           : OnboardingPage(),
       builder: (context, child) {
         ErrorWidget.builder = (FlutterErrorDetails details) {
