@@ -317,7 +317,7 @@ class _RecognitionPageState extends State<RecognitionPage> {
                           showValueIndicator: ShowValueIndicator.always,
                         ),
                         child: Slider(
-                          value: currentServing,
+                          value: currentServing.clamp(0.5, 5.0),
                           min: 0.5,
                           max: 5.0,
                           divisions: 9,

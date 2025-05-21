@@ -36,7 +36,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     selectedGender = widget.user.gender;
     selectedActivityLabel = activityLevelMap.entries
         .firstWhere((e) => e.value == widget.user.activityLevel,
-        orElse: () => const MapEntry("가벼운 운동을 주 1-3회", 1.5))
+        orElse: () => const MapEntry("활동량: 보통 (주 1-3회 가벼운 운동)", 1.5))
         .key;
     ageController = TextEditingController(text: widget.user.age.toString());
     heightController = TextEditingController(text: widget.user.height.toString());
