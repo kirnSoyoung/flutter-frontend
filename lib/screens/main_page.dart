@@ -229,6 +229,7 @@ class _HomePageState extends State<HomePage> {
                           Text("영양소 섭취량", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                           SizedBox(height: 16),
                           GroupedNutrientSection(intakeMap: intake, daySpan: daySpan),
+                          SizedBox(height: 40),
                         ],
                       ),
                     ),

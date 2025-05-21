@@ -144,12 +144,16 @@ class _RecognitionPageState extends State<RecognitionPage> {
     );
   }
 
-  void _addFoodFromSearch(String input) {
+  Future<void> _addFoodFromSearch(String input) async {
     final value = input.trim();
     if (value.isEmpty) return;
     if (!selectedFoods.contains(value) && mealOptions.contains(value)) {
+      final user = await SharedPrefs.getLoggedInUser(); // ✅ 사용자 정보 가져오기
+      final defaultServing = user?.servingSize ?? 1.0;
+
       setState(() {
         selectedFoods.add(value);
+        servings[value] = defaultServing;
         searchController.clear();
       });
     }
@@ -236,12 +240,16 @@ class _RecognitionPageState extends State<RecognitionPage> {
                         : s;
                     return ListTile(
                       title: Text(labelText),
-                      onTap: () {
-                        setState(() {
-                          selectedFoods.add(s);
-                          searchController.clear();
-                        });
-                      },
+                        onTap: () async {
+                          final user = await SharedPrefs.getLoggedInUser();
+                          final defaultServing = user?.servingSize ?? 1.0;
+
+                          setState(() {
+                            selectedFoods.add(s);
+                            servings[s] = defaultServing; // ✅ 이거 추가
+                            searchController.clear();
+                          });
+                        }
                     );
                   }).toList(),
                 ),
