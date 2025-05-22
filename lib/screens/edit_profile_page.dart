@@ -146,7 +146,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
                       value: selectedActivityLabel,
                       items: {
                         for (var entry in activityLevelMap.entries)
-                          entry.key: "활동량: ${entry.key}"
+                          entry.key: "${entry.key}"
                       },
                       onChanged: (value) => setState(() => selectedActivityLabel = value!),
                     ),

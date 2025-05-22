@@ -155,6 +155,15 @@ class _SignupPageState extends State<SignupPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildInputField(servingController, "기본 인분 수", "예: 1.0", Icons.dining, TextInputType.number),
+        SizedBox(height: 24),
+        Text(
+          "활동량",
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: Colors.black87,
+          ),
+        ),
         SizedBox(height: 16),
         ...activityLevels.entries.map((e) => _buildActivityOption(e.key, e.value)).toList(),
         SizedBox(height: 32),
