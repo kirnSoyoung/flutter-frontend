@@ -16,7 +16,7 @@ class _SignupPageState extends State<SignupPage> {
   final TextEditingController ageController = TextEditingController();
   final TextEditingController heightController = TextEditingController();
   final TextEditingController weightController = TextEditingController();
-  final TextEditingController servingController = TextEditingController(text: "1.0");
+  final TextEditingController servingController = TextEditingController();
 
   String selectedGender = "남성";
   String activityLevel = "보통";
