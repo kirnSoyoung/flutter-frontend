@@ -155,6 +155,8 @@ class _SignupPageState extends State<SignupPage> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildInputField(servingController, "기본 인분 수", "예: 1.0", Icons.dining, TextInputType.number),
+        SizedBox(height: 16),
+        Text("평소 본인의 한 끼 기준으로 인분 수치를 알려주세요!", style: TextStyle(fontSize: 14, color: Colors.grey[600])),
         SizedBox(height: 24),
         Text(
           "활동량",
