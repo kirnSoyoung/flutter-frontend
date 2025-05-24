@@ -77,21 +77,37 @@ class ApiService {
   }
 
   /// 사용자별 영양소 삭제
-  static Future<bool> deleteUserNutrients(String date) async {
+  static Future<bool> deleteUserNutrients(Map<String, double> nutrients, String date) async {
     try {
       final user = await SharedPrefs.getLoggedInUser();
       if (user == null) return false;
+
+      // 서버에 보낼 nutrient 배열 생성
+      final nutrientsList = nutrDb.map((key) => nutrients[key] ?? 0.0).toList();
+
       final response = await http.post(
         Uri.parse("$baseUrl/database/user/delete"),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'user_id': user.userId, 'date': date, 'nutrients': {}}),
+        body: jsonEncode({
+          'user_id': user.userId,
+          'date': date,
+          'nutrients': nutrientsList,
+        }),
       );
-      return response.statusCode == 200;
+
+      if (response.statusCode == 200) {
+        print("✅ 삭제된 영양소 서버에 전송 완료");
+        return true;
+      } else {
+        print("❌ 삭제 요청 실패: ${response.statusCode}");
+        return false;
+      }
     } catch (e) {
       print("❌ deleteUserNutrients 예외 발생: $e");
       return false;
     }
   }
+
 
   static Future<bool> registerUser(User user) async {
     try {

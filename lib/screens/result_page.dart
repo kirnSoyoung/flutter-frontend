@@ -11,7 +11,6 @@ import '../utils/api_service.dart';
 import '../widgets/box_section.dart';
 
 import 'recognition_page.dart';
-import 'navigation_bar.dart';
 
 class NutritionResultPage extends StatefulWidget {
   final String imagePath;
@@ -172,17 +171,19 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
           ),
           TextButton(
             onPressed: () async {
-              final totalNutrients = <String, double>{};
+              // 👉 삭제 대상 식단의 영양소 계산
+              final Map<String, double> deletedNutrients = {};
               widget.nutrients.forEach((food, nutrientMap) {
-                final serving = widget.servingsMap[food] ?? 1.0;
+                final multiplier = widget.servingsMap[food] ?? 1.0;
                 nutrientMap.forEach((key, value) {
-                  totalNutrients[key] = (totalNutrients[key] ?? 0.0) + (value * serving);
+                  deletedNutrients[key] = (deletedNutrients[key] ?? 0.0) + (value * multiplier);
                 });
               });
 
               final String dateOnly = mealDate.toIso8601String().split('T')[0];
-              await ApiService.deleteUserNutrients(dateOnly);
+              await ApiService.deleteUserNutrients(deletedNutrients, dateOnly);
 
+              // 👉 로컬에서도 제거
               dataManager.deleteMealByImagePath(mealDate, widget.imagePath);
               Navigator.pop(context);
               _goBack();
@@ -193,6 +194,7 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
       ),
     );
   }
+
 
   Widget _buildBottomButtons() {
     return Column(
