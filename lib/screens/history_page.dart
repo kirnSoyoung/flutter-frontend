@@ -83,9 +83,9 @@ class _HistoryPageState extends State<HistoryPage> {
     if (filt.isEmpty) return 0.0;
     final sum = filt.map((k) {
       final goal = _rdi![k] ?? 1.0;
-      return (intake[k]! / goal).clamp(0.0, 1.0);
+      return (intake[k]! / goal);
     }).reduce((a, b) => a + b);
-    return (sum / filt.length).clamp(0.0, 1.0);
+    return (sum / filt.length);
   }
 
   @override
@@ -289,7 +289,7 @@ class _HistoryPageState extends State<HistoryPage> {
     final groups = {
       '에너지': ['에너지'],
       '탄수화물': ['탄수화물', '식이섬유'],
-      '단백질/지방': ['단백질', '지방'],
+      '단백질': ['단백질'],
       '비타민': [
         '비타민A','비타민B1','비타민B2','비타민B6','비타민B12',
         '비타민C','비타민D','비타민E','비타민K',

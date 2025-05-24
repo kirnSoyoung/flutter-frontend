@@ -25,7 +25,7 @@ class _GroupedNutrientSectionState extends State<GroupedNutrientSection> {
   static const _groups = <String, List<String>>{
     '에너지': ['에너지'],
     '탄수화물/식이섬유': ['탄수화물', '식이섬유'],
-    '단백질/지방': ['단백질', '지방'],
+    '단백질': ['단백질'],
     '비타민': [
       '비타민A','비타민B1','비타민B2','비타민B6','비타민B12',
       '비타민C','비타민D','비타민E','비타민K',

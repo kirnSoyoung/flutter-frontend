@@ -26,7 +26,6 @@ Map<String, double> calculatePersonalRequirements(User user) {
 const Map<String, double> koreanMale19to29RDI = {
   '에너지': 2600.0,           // kcal
   '단백질': 65000.0,          // 65g → mg
-  '지방': 65000.0,            // 65g 기준 사용 (중간값: 58~86g 가능)
   '탄수화물': 130000.0,       // 130g → mg
   '식이섬유': 30000.0,        // 30g → mg
   '칼슘': 800.0,              // mg
@@ -59,7 +58,6 @@ const Map<String, String> nutrientUnits = {
   '탄수화물': 'g',
   '식이섬유': 'g',
   '단백질': 'g',
-  '지방': 'g',
   '오메가 3 지방산': 'g',
   '비타민A': '㎍',
   '비타민D': '㎍',
