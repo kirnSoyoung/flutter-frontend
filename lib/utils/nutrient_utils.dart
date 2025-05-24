@@ -1,3 +1,5 @@
+import '../models/meal_model.dart';
+
 String getNutrientUnit(String label) {
   // 괄호 안의 단위를 정규표현식으로 추출
   final unitRegExp = RegExp(r'\\((.*?)\\)');
@@ -60,24 +62,67 @@ const Map<String, List<String>> nutrientGroups = {
   "미네랄": ["칼슘", "마그네슘", "철", "아연", "구리", "망간", "요오드", "셀레늄", "인", "나트륨", "칼륨"],
 };
 
-Map<String, double> calculateGroupPercents(Map<String, double> intake, Map<String, double> standards) {
-  final result = <String, double>{};
+double calculateGroupPercent({
+  required Map<String, double> intake,
+  required Map<String, double> rdi,
+  required List<String> keys,
+}) {
+  final filt = keys.where((k) => intake.containsKey(k)).toList();
+  if (filt.isEmpty) return 0.0;
+  final sum = filt.map((k) {
+    final got = intake[k]!;
+    final goal = rdi[k] ?? 1.0;
 
-  nutrientGroups.forEach((groupName, nutrientList) {
-    double sumPercent = 0;
-    int count = 0;
-
-    for (final nutrient in nutrientList) {
-      if (intake.containsKey(nutrient) && standards.containsKey(nutrient)) {
-        final ratio = intake[nutrient]! / standards[nutrient]!;
-        sumPercent += ratio;
-        count++;
-      }
-    }
-
-    result[groupName] = count > 0 ? sumPercent / count : 0.0;
-  });
-
-  return result;
+    return (got / goal).clamp(0.0, 1.0);
+  }).reduce((a, b) => a + b);
+  return (sum / filt.length).clamp(0.0, 1.0);
 }
 
+/// 그룹별 퍼센트를 식단별로 계산한 후 평균을 내는 함수
+Map<String, double> averageGroupPercentsAcrossMeals({
+  required List<Meal> meals,
+  required Map<String, double> rdi,
+}) {
+  const groupMap = {
+    '에너지': ['에너지'],
+    '탄수화물/식이섬유': ['탄수화물', '식이섬유'],
+    '단백질/지방': ['단백질', '지방'],
+    '비타민': [
+      '비타민A','비타민B1','비타민B2','비타민B6','비타민B12',
+      '비타민C','비타민D','비타민E','비타민K',
+      '엽산','나이아신','판토텐산','비오틴'
+    ],
+    '미네랄': [
+      '칼슘','마그네슘','철','아연','구리','망간',
+      '요오드','셀레늄','인','나트륨','칼륨'
+    ],
+  };
+
+  final totals = <String, double>{ for (var key in groupMap.keys) key: 0.0 };
+
+  for (final meal in meals) {
+    final summed = <String, double>{};
+    meal.nutrients.forEach((_, nutrientMap) {
+      nutrientMap.forEach((key, value) {
+        final normalized = normalizeNutrientKey(key);
+        summed[normalized] = (summed[normalized] ?? 0.0) + value;
+      });
+    });
+
+    for (final entry in groupMap.entries) {
+      final groupLabel = entry.key;
+      final keys = entry.value;
+      final percent = calculateGroupPercent(
+        intake: summed,
+        rdi: rdi,
+        keys: keys,
+      );
+      totals[groupLabel] = totals[groupLabel]! + percent;
+    }
+  }
+
+  return {
+    for (final key in totals.keys)
+      key: meals.isEmpty ? 0.0 : (totals[key]! / meals.length)
+  };
+}

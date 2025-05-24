@@ -1,21 +1,25 @@
 import 'package:flutter/material.dart';
 
 class NutrientProgressCircle extends StatelessWidget {
-  final double progress; // ex: 1.25 → 125%
+  final double intake;
+  final double rdi;
   final String label;
 
   const NutrientProgressCircle({
-    super.key,
-    required this.progress,
+    required this.intake,
+    required this.rdi,
     required this.label,
+    super.key,
   });
+
 
   @override
   Widget build(BuildContext context) {
+    final progress = (intake / rdi);
     final percent = (progress * 100).round();
     final color = progress > 1.0
         ? Colors.red
-        : (progress >= 1.0 ? Colors.green : Colors.blueAccent);
+        : (progress >= 1.0 ? Colors.red : Colors.blueAccent);
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -27,7 +31,7 @@ class NutrientProgressCircle extends StatelessWidget {
               width: 80,
               height: 80,
               child: CircularProgressIndicator(
-                value: progress.clamp(0.0, 1.0), // 게이지는 100%까지만
+                value: progress,
                 strokeWidth: 8,
                 backgroundColor: Colors.grey.shade200,
                 valueColor: AlwaysStoppedAnimation<Color>(color),

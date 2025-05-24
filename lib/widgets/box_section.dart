@@ -54,15 +54,20 @@ class _GroupedNutrientSectionState extends State<GroupedNutrientSection> {
   double _calculateProgress(String groupLabel) {
     if (_rdi == null) return 0.0;
     final keys = _groups[groupLabel]!;
-    double sum = 0;
     final divisor = widget.daySpan ?? 1;
 
-    for (var k in keys) {
-      final goal = (_rdi![k] ?? 0) * divisor;
-      final got = widget.intakeMap[k] ?? 0;
-      if (goal > 0) sum += (got / goal);
-    }
-    return keys.isEmpty ? 0 : sum / keys.length;
+    final adjustedRdi = {
+      for (final entry in _rdi!.entries)
+        entry.key: entry.value * divisor,
+    };
+
+    final filteredKeys = keys.where((k) => widget.intakeMap.containsKey(k)).toList();
+
+    return calculateGroupPercent(
+      intake: widget.intakeMap,
+      rdi: adjustedRdi,
+      keys: filteredKeys,
+    );
   }
 
   void _toggleGroup(String label) {
@@ -82,10 +87,13 @@ class _GroupedNutrientSectionState extends State<GroupedNutrientSection> {
     final secondRow = labels.sublist(3);
 
     Widget _buildCircle(String label) {
+      final progress = _calculateProgress(label);
+
       return GestureDetector(
         onTap: () => _toggleGroup(label),
         child: NutrientProgressCircle(
-          progress: _calculateProgress(label),
+          intake: progress * 100, // 계산된 퍼센트를 그대로 전달
+          rdi: 100, // 기준을 100으로 하여 퍼센트 출력되도록
           label: label,
         ),
       );
@@ -139,7 +147,7 @@ class _GroupedNutrientSectionState extends State<GroupedNutrientSection> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(nutrient, style: const TextStyle(fontSize: 14)),
-                Text(formatNutrientValue(nutrient, amount / divisor) , style: const TextStyle(fontSize: 14)),
+                Text(formatNutrientValue(nutrient, amount / divisor), style: const TextStyle(fontSize: 14)),
               ],
             ),
           );

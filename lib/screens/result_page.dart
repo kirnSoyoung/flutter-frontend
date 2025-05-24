@@ -8,9 +8,11 @@ import '../utils/data_manager.dart';
 import '../utils/nutrition_standards.dart';
 import '../utils/nutrient_utils.dart';
 import '../utils/api_service.dart';
+import '../utils/shared_prefs.dart';
 import '../widgets/box_section.dart';
 
 import 'recognition_page.dart';
+import 'navigation_bar.dart';
 
 class NutritionResultPage extends StatefulWidget {
   final String imagePath;
@@ -59,25 +61,32 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
         final value = entry.value;
         total[key] = (total[key] ?? 0.0) + (value * multiplier);
       }
-      print("🔍 $foodName: multiplier = ${servings[foodName]}, nutrients = $nutrientMap");
+      print("🔍 $foodName: multiplier = \${servings[foodName]}, nutrients = \$nutrientMap");
     }
 
     return total;
   }
 
   Future<void> _prepareNutrientData() async {
-    final total = widget.isFromHistory
-        ? _sumAllNutrients(
-      widget.nutrients,
-      { for (var k in widget.mealNames) k: 1.0 },
-    )
-        : _sumAllNutrients(
-      widget.nutrients,
-      widget.servingsMap,
-    );
+    final user = await SharedPrefs.getLoggedInUser();
+    final rdi = calculatePersonalRequirements(user!);
+
+    final baseKeys = { for (final key in rdi.keys) key: 0.0 };
+    final intake = { ...baseKeys };
+
+    final raw = widget.isFromHistory
+        ? _sumAllNutrients(widget.nutrients, { for (var k in widget.mealNames) k: 1.0 })
+        : _sumAllNutrients(widget.nutrients, widget.servingsMap);
+
+    raw.forEach((key, value) {
+      final norm = normalizeNutrientKey(key);
+      if (intake.containsKey(norm)) {
+        intake[norm] = intake[norm]! + value;
+      }
+    });
 
     setState(() {
-      _displayedNutrients = total;
+      _displayedNutrients = intake;
       _isLoading = false;
     });
   }
@@ -86,21 +95,18 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
     setState(() {
       if (_selectedFood == name) {
         _selectedFood = null;
-        _displayedNutrients = _sumAllNutrients(
-          widget.nutrients,
-          widget.isFromHistory
-              ? { for (var k in widget.mealNames) k: 1.0 }
-              : widget.servingsMap,
-        );
+        _prepareNutrientData();
       } else {
         _selectedFood = name;
         final selectedMap = widget.nutrients[name] ?? {};
         final multiplier = widget.isFromHistory ? 1.0 : widget.servingsMap[name] ?? 1.0;
         final filtered = <String, double>{};
         selectedMap.forEach((key, value) {
-          filtered[key] = value * multiplier;
+          filtered[normalizeNutrientKey(key)] = value * multiplier;
         });
-        _displayedNutrients = filtered;
+        setState(() {
+          _displayedNutrients = filtered;
+        });
       }
     });
   }
@@ -110,7 +116,6 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
     final dataManager = Provider.of<DataManager>(context, listen: false);
     final date = widget.selectedDate ?? DateTime.now();
 
-    // 로컬 저장
     dataManager.deleteMealByImagePath(date, widget.imagePath);
 
     final scaledNutrients = <String, Map<String, double>>{};
@@ -118,14 +123,10 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
 
     widget.nutrients.forEach((food, nutrientMap) {
       final serving = widget.servingsMap[food] ?? 1.0;
-
-      // 개별 음식의 영양소를 인분에 맞게 스케일링
       scaledNutrients[food] = {
         for (final entry in nutrientMap.entries)
           entry.key: entry.value * serving,
       };
-
-      // 전체 영양소 합산
       nutrientMap.forEach((key, value) {
         totalNutrients[key] = (totalNutrients[key] ?? 0.0) + (value * serving);
       });
@@ -140,18 +141,13 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
     );
 
     final String dateOnly = date.toIso8601String().split('T')[0];
-
-    // ✅ 서버로 전송
     final success = await ApiService.saveUserNutrients(totalNutrients, dateOnly);
-    print("✅ saveUserNutrients result = $success");
+    print("✅ saveUserNutrients result = \$success");
     if (success) {
       setState(() => _isSaved = true);
-
-      Navigator.of(context).pop(); // 결과 페이지 닫기
+      Navigator.of(context).pop();
     }
-
   }
-
 
   void _goBack() => Navigator.pop(context);
 
@@ -165,13 +161,9 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
         title: Text("삭제 확인"),
         content: Text("정말로 이 식단을 삭제하시겠습니까?"),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text("취소"),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context), child: Text("취소")),
           TextButton(
             onPressed: () async {
-              // 👉 삭제 대상 식단의 영양소 계산
               final Map<String, double> deletedNutrients = {};
               widget.nutrients.forEach((food, nutrientMap) {
                 final multiplier = widget.servingsMap[food] ?? 1.0;
@@ -179,11 +171,8 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
                   deletedNutrients[key] = (deletedNutrients[key] ?? 0.0) + (value * multiplier);
                 });
               });
-
               final String dateOnly = mealDate.toIso8601String().split('T')[0];
               await ApiService.deleteUserNutrients(deletedNutrients, dateOnly);
-
-              // 👉 로컬에서도 제거
               dataManager.deleteMealByImagePath(mealDate, widget.imagePath);
               Navigator.pop(context);
               _goBack();
@@ -194,7 +183,6 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
       ),
     );
   }
-
 
   Widget _buildBottomButtons() {
     return Column(
@@ -208,9 +196,7 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
             style: ElevatedButton.styleFrom(
               backgroundColor: widget.isFromHistory ? Colors.red : Colors.green,
               foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8.0),
-              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
             ),
             child: Text(
               widget.isFromHistory ? "삭제하기" : "식단 저장하기",
@@ -250,15 +236,10 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
 
   @override
   Widget build(BuildContext context) {
-    GroupedNutrientSection(intakeMap: _displayedNutrients);
-
     return Scaffold(
       appBar: AppBar(
         title: Text("영양소 분석 결과"),
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back),
-          onPressed: _goBack,
-        ),
+        leading: IconButton(icon: Icon(Icons.arrow_back), onPressed: _goBack),
       ),
       body: _isLoading
           ? Center(child: CircularProgressIndicator())
