@@ -296,6 +296,8 @@ class _SignupPageState extends State<SignupPage> {
   }
 
   void _handleNext() async {
+    FocusScope.of(context).unfocus(); // 모든 TextField의 포커스를 해제
+
     if (currentStep < 2) {
       setState(() => currentStep++);
     } else {
