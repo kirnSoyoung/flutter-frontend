@@ -6,7 +6,7 @@ import 'nutrient_gauge.dart';
 
 class GroupedNutrientSection extends StatefulWidget {
   final Map<String, double> intakeMap;
-  final int? daySpan; // optional multiplier for RDI 기준 일수
+  final int? daySpan;
 
   const GroupedNutrientSection({
     Key? key,
@@ -46,8 +46,7 @@ class _GroupedNutrientSectionState extends State<GroupedNutrientSection> {
   Future<void> _loadRdi() async {
     final user = await SharedPrefs.getLoggedInUser();
     if (user != null) {
-      final personal = calculatePersonalRequirements(user);
-      setState(() => _rdi = personal);
+      setState(() => _rdi = calculatePersonalRequirements(user));
     }
   }
 
@@ -55,18 +54,14 @@ class _GroupedNutrientSectionState extends State<GroupedNutrientSection> {
     if (_rdi == null) return 0.0;
     final keys = _groups[groupLabel]!;
     final divisor = widget.daySpan ?? 1;
-
-    final adjustedRdi = {
-      for (final entry in _rdi!.entries)
-        entry.key: entry.value * divisor,
+    final adjusted = {
+      for (final e in _rdi!.entries) e.key: e.value * divisor,
     };
-
-    final filteredKeys = keys.where((k) => widget.intakeMap.containsKey(k)).toList();
-
+    final useKeys = keys.where((k) => widget.intakeMap.containsKey(k)).toList();
     return calculateGroupPercent(
       intake: widget.intakeMap,
-      rdi: adjustedRdi,
-      keys: filteredKeys,
+      rdi: adjusted,
+      keys: useKeys,
     );
   }
 
@@ -88,39 +83,41 @@ class _GroupedNutrientSectionState extends State<GroupedNutrientSection> {
 
     Widget _buildCircle(String label) {
       final progress = _calculateProgress(label);
+      final selected = _selectedGroup == label;
 
       return GestureDetector(
         onTap: () => _toggleGroup(label),
         child: NutrientProgressCircle(
-          intake: progress * 100, // 계산된 퍼센트를 그대로 전달
-          rdi: 100, // 기준을 100으로 하여 퍼센트 출력되도록
+          intake: progress * 100,
+          rdi: 100,
           label: label,
+          isSelected: selected,  // ← 선택 여부 전달
         ),
       );
     }
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Column(
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: firstRow.map((lbl) {
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: _buildCircle(lbl),
-              );
-            }).toList(),
+            children: firstRow
+                .map((lbl) => Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: _buildCircle(lbl),
+            ))
+                .toList(),
           ),
           const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: secondRow.map((lbl) {
-              return Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: _buildCircle(lbl),
-              );
-            }).toList(),
+            children: secondRow
+                .map((lbl) => Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: _buildCircle(lbl),
+            ))
+                .toList(),
           ),
           if (_selectedGroup != null) ...[
             const SizedBox(height: 12),
@@ -140,14 +137,16 @@ class _GroupedNutrientSectionState extends State<GroupedNutrientSection> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: keys.map((nutrient) {
           final amount = widget.intakeMap[nutrient] ?? 0;
-          final unit = nutrientUnits[nutrient] ?? '';
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 2),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(nutrient, style: const TextStyle(fontSize: 14)),
-                Text(formatNutrientValue(nutrient, amount / divisor), style: const TextStyle(fontSize: 14)),
+                Text(
+                  formatNutrientValue(nutrient, amount / divisor),
+                  style: const TextStyle(fontSize: 14),
+                ),
               ],
             ),
           );

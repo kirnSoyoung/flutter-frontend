@@ -313,36 +313,36 @@ class _SignupPageState extends State<SignupPage> {
       {
         setState(() => errorMessage = "아이디를 입력해주세요");
         return;
-        }
+      }
 
 
-        final user = User(
+      final user = User(
         userId: userId,
-          gender: selectedGender,
-          age: int.parse(ageController.text),
-          height: double.parse(heightController.text),
-          weight: double.parse(weightController.text),
-          activityLevel: activityLevelFactors[activityLevel] ?? 1.5,
-          servingSize: double.tryParse(servingController.text) ?? 1.0,
-        );
+        gender: selectedGender,
+        age: int.parse(ageController.text),
+        height: double.parse(heightController.text),
+        weight: double.parse(weightController.text),
+        activityLevel: activityLevelFactors[activityLevel] ?? 1.5,
+        servingSize: double.tryParse(servingController.text) ?? 1.0,
+      );
 
-        final success = await ApiService.registerUser(user);
-        if (!success) {
-          setState(() => errorMessage = "이미 사용 중인 아이디입니다");
-          return;
-        }
+      final success = await ApiService.registerUser(user);
+      if (!success) {
+        setState(() => errorMessage = "이미 사용 중인 아이디입니다");
+        return;
+      }
 
-        await SharedPrefs.saveUser(user);
-        await SharedPrefs.saveLoggedInUser(user);
+      await SharedPrefs.saveUser(user);
+      await SharedPrefs.saveLoggedInUser(user);
 
-        if (!mounted) return;
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(
-            builder: (_) => MainScreen(),
-          ),
-              (route) => false,
-        );
-      } catch (e) {
+      if (!mounted) return;
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (_) => MainScreen(),
+        ),
+            (route) => false,
+      );
+    } catch (e) {
       print("❌ 회원가입 오류: $e");
       setState(() => errorMessage = "회원가입 중 오류가 발생했습니다");
     }
