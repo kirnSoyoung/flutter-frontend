@@ -17,7 +17,7 @@ class NutrientProgressCircle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final rawProgress = intake / rdi;
-    final progress = rawProgress.clamp(0.0, 1.0);
+    final progress = rawProgress;
     final percent = (progress * 100).round();
     final color = rawProgress > 1.0 ? Colors.red : Colors.blueAccent;
 
