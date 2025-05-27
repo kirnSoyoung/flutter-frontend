@@ -16,10 +16,9 @@ class NutrientProgressCircle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final rawProgress = intake / rdi;
-    final progress = rawProgress;
+    final progress = intake / rdi;
     final percent = (progress * 100).round();
-    final color = rawProgress > 1.0 ? Colors.red : Colors.blueAccent;
+    final color = progress > 1.0 ? Colors.red : Colors.blueAccent;
 
     return Column(
       mainAxisSize: MainAxisSize.min,

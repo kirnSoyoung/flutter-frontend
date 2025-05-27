@@ -91,25 +91,39 @@ class _NutritionResultPageState extends State<NutritionResultPage> {
     });
   }
 
-  void _toggleFood(String name) {
-    setState(() {
-      if (_selectedFood == name) {
+  void _toggleFood(String name) async {
+    if (_selectedFood == name) {
+      setState(() {
         _selectedFood = null;
-        _prepareNutrientData();
-      } else {
-        _selectedFood = name;
-        final selectedMap = widget.nutrients[name] ?? {};
-        final multiplier = widget.isFromHistory ? 1.0 : widget.servingsMap[name] ?? 1.0;
-        final filtered = <String, double>{};
-        selectedMap.forEach((key, value) {
-          filtered[normalizeNutrientKey(key)] = value * multiplier;
-        });
-        setState(() {
-          _displayedNutrients = filtered;
-        });
-      }
+      });
+      _prepareNutrientData(); // 전체 다시 계산
+      return;
+    }
+
+    final user = await SharedPrefs.getLoggedInUser();
+    if (user == null) return;
+    final rdi = calculatePersonalRequirements(user);
+
+    final selectedMap = widget.nutrients[name] ?? {};
+    final multiplier = widget.isFromHistory ? 1.0 : widget.servingsMap[name] ?? 1.0;
+
+    final filtered = <String, double>{};
+    for (final rdiKey in rdi.keys) {
+      // normalizeKey가 rdiKey에 대응되는 값을 찾는다
+      final matchingEntry = selectedMap.entries.firstWhere(
+            (e) => normalizeNutrientKey(e.key) == rdiKey,
+        orElse: () => const MapEntry('', 0.0),
+      );
+      final value = matchingEntry.value;
+      filtered[rdiKey] = value * multiplier;
+    }
+
+    setState(() {
+      _selectedFood = name;
+      _displayedNutrients = filtered;
     });
   }
+
 
   void _saveMeal() async {
     if (_isSaved) return;
