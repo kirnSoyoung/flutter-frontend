@@ -6,7 +6,7 @@ import '../utils/shared_prefs.dart';
 import '../utils/test_nutrients.dart';
 
 class ApiService {
-  static const String baseUrl = "http://54.253.61.191:8000";
+  static const String baseUrl = "http://16.176.156.106:8000";
 
   static const List<String> nutrDb = [
     '에너지', '탄수화물', '식이섬유', '단백질', '리놀레산', '알파-리놀렌산', 'EPA+DHA',

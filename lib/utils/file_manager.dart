@@ -48,12 +48,12 @@ class FileManager {
   static Future<Map<String, dynamic>?> uploadImageToServer(File imageFile) async {
     try {
 
-      print("📡 [DEBUG] API 요청 보냄: http://54.253.61.191:8000/s3/upload/");
+      print("📡 [DEBUG] API 요청 보냄: http://16.176.156.106:8000/s3/upload/");
       print("📡 [DEBUG] 업로드할 파일: ${imageFile.path}");
 
       var request = http.MultipartRequest(
         'POST',
-        Uri.parse('http://54.253.61.191:8000/s3/upload/'),
+        Uri.parse('http://16.176.156.106:8000/s3/upload/'),
       );
 
       var mimeType = lookupMimeType(imageFile.path);
