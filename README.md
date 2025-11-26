@@ -58,3 +58,9 @@
 - Python FastAPI 서버
 - Food classification AI 모델
 - 사용자 영양 DB 및 권장 섭취량 계산 엔진
+
+---
+
+## 실행 영상
+
+https://youtu.be/VbCvg-6oUXs?si=zB8czWaqRzbyPp1h
