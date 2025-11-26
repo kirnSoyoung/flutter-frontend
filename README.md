@@ -1,16 +1,60 @@
-# untitled1
+# 🍽️ Smart Nutrition App  
+**음식 사진 기반 영양 분석 및 영양제 추천 애플리케이션**  
+2025 한국기술교육대학교 졸업작품
 
-A new Flutter project.
+---
 
-## Getting Started
+## 📌 프로젝트 개요
+이 프로젝트는 사용자가 **음식 사진을 촬영하면**, AI가 해당 이미지를 분석하여 **음식 종류와 영양 성분을 추출**하고, 이를 바탕으로 **부족한 영양소를 진단해 맞춤형 영양제를 추천**해주는 모바일 애플리케이션입니다.
 
-This project is a starting point for a Flutter application.
+2025년 한국기술교육대학교 졸업작품으로 개발되었으며, 총 **5명 팀**으로 구성되었습니다.  
+이 저장소는 **프론트엔드(Android/iOS Flutter App)** 부분만을 포함하고 있습니다.
 
-A few resources to get you started if this is your first Flutter project:
+> ⚠️ 일부 팀원의 백엔드/AI 작업물은 이 저장소에 포함되어 있지 않습니다.  
+> 이 Repo는 **프론트엔드 코드만**을 다룹니다.
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+---
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## 🎯 주요 기능
+
+### 📌 1. 음식 이미지 분석
+- 카메라 촬영 또는 갤러리 업로드  
+- 서버 AI 모델 기반 음식 종류 판별  
+- 음식명 기반 영양 성분 데이터 호출
+
+---
+
+### 📌 2. 실시간 영양 성분 분석
+- 음식 데이터베이스에서 영양소 정보 자동 매핑  
+- 사용자 하루 섭취량 누적 계산  
+- 부족/과다 영양소 그래프 시각화  
+
+---
+
+### 📌 3. 영양제 추천 시스템
+- AI 분석 기반 맞춤형 영양제 추천  
+- 비타민·미네랄·필수지방산 등 카테고리별 추천  
+- 성별/나이/체중/활동수준 기반 개인화 분석  
+
+---
+
+### 📌 4. 기록 / 히스토리 관리
+- 날짜별 식단 및 영양 섭취 변화 추적  
+- 사용자 일간 분석 그래프 제공  
+- 이전 기록 조회 기능 제공  
+
+---
+
+## 🧩 기술 스택
+
+### **Frontend (이 Repo 포함)**
+- Flutter (Dart)
+- Provider / ChangeNotifier 상태관리
+- http 패키지를 이용한 REST API 통신
+- SharedPreferences 로컬 사용자 정보 저장
+- Custom Graph / Gauge UI로 영양소 시각화
+
+### **Backend / AI (별도 저장소)**
+- Python FastAPI 서버
+- Food classification AI 모델
+- 사용자 영양 DB 및 권장 섭취량 계산 엔진
